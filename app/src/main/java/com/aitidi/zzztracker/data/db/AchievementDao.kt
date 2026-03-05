@@ -17,6 +17,9 @@ interface AchievementDao {
     @Query("UPDATE achievements SET progress = :progress WHERE id = :id")
     suspend fun updateProgress(id: String, progress: Boolean)
 
+    @Query("UPDATE achievements SET progress = 0")
+    suspend fun resetAllProgress()
+
     @Query("SELECT COUNT(*) FROM achievements")
     suspend fun totalCount(): Int
 

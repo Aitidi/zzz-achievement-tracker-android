@@ -1,6 +1,7 @@
 package com.aitidi.zzztracker.data.repo
 
 import android.content.Context
+import android.net.Uri
 import com.aitidi.zzztracker.data.db.AchievementDao
 import com.aitidi.zzztracker.data.db.AchievementEntity
 import com.aitidi.zzztracker.model.AchievementItem
@@ -25,7 +26,6 @@ class TrackerRepository(private val context: Context, private val dao: Achieveme
             return
         }
 
-        // fallback: single aggregate file
         val text = context.assets.open("achievements_master.json").bufferedReader().use { it.readText() }
         val payload = json.decodeFromString(MasterPayload.serializer(), text)
         dao.upsertAll(payload.items.map { it.toEntity() })
@@ -33,9 +33,31 @@ class TrackerRepository(private val context: Context, private val dao: Achieveme
 
     suspend fun toggle(id: String, progress: Boolean) = dao.updateProgress(id, progress)
 
-    suspend fun exportProgressJson(): String {
+    suspend fun resetAllProgress() = dao.resetAllProgress()
+
+    suspend fun exportProgressToUri(uri: Uri): Int {
         val items = dao.observeAll().first().map { ExportItem(it.id, it.progress) }
-        return json.encodeToString(ExportPayload.serializer(), ExportPayload(items))
+        val payload = ExportPayload(items)
+        val text = json.encodeToString(ExportPayload.serializer(), payload)
+        context.contentResolver.openOutputStream(uri)?.bufferedWriter()?.use { it.write(text) }
+            ?: error("无法写入文件")
+        return items.count { it.progress }
+    }
+
+    suspend fun importProgressFromUri(uri: Uri): ImportResult {
+        val text = context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+            ?: error("无法读取文件")
+        val payload = json.decodeFromString(ExportPayload.serializer(), text)
+        val current = dao.observeAll().first().associateBy { it.id }
+
+        var applied = 0
+        payload.items.forEach { incoming ->
+            if (current.containsKey(incoming.id)) {
+                dao.updateProgress(incoming.id, incoming.progress)
+                applied++
+            }
+        }
+        return ImportResult(applied = applied, source = payload.items.size)
     }
 
     private fun loadFromVersionPacks(): List<AchievementEntity> {
@@ -68,6 +90,8 @@ class TrackerRepository(private val context: Context, private val dao: Achieveme
 }
 
 private fun AchievementEntity.toModel() = AchievementItem(id, name, description, version, category, progress)
+
+data class ImportResult(val applied: Int, val source: Int)
 
 @Serializable
 data class VersionIndex(
