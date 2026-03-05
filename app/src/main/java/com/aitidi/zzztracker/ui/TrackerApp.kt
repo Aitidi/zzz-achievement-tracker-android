@@ -54,6 +54,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.aitidi.zzztracker.model.AchievementItem
+import com.aitidi.zzztracker.ui.theme.ThemeMode
+import com.aitidi.zzztracker.ui.theme.ZzzTrackerTheme
 import com.aitidi.zzztracker.viewmodel.TrackerViewModel
 
 private enum class HomeTab(val title: String) { LIST("成就"), STATS("统计"), SETTINGS("设置") }
@@ -87,38 +89,42 @@ fun TrackerApp(vm: TrackerViewModel = viewModel()) {
         todoOk && qOk && verOk && catOk
     }
 
-    Scaffold(
-        topBar = { TopAppBar(title = { Text("ZZZ Achievements", fontWeight = FontWeight.SemiBold) }) },
-        snackbarHost = { SnackbarHost(snackbar) },
-        bottomBar = {
-            NavigationBar {
-                HomeTab.entries.forEach {
-                    NavigationBarItem(selected = tab == it, onClick = { tab = it }, icon = {}, label = { Text(it.title) })
+    ZzzTrackerTheme(mode = ui.themeMode) {
+        Scaffold(
+            topBar = { TopAppBar(title = { Text("ZZZ Achievements", fontWeight = FontWeight.SemiBold) }) },
+            snackbarHost = { SnackbarHost(snackbar) },
+            bottomBar = {
+                NavigationBar {
+                    HomeTab.entries.forEach {
+                        NavigationBarItem(selected = tab == it, onClick = { tab = it }, icon = {}, label = { Text(it.title) })
+                    }
                 }
             }
-        }
-    ) { padding ->
-        when (tab) {
-            HomeTab.LIST -> ListTab(
-                padding = padding,
-                onlyTodo = ui.onlyTodo,
-                query = ui.query,
-                selectedVersion = ui.selectedVersion,
-                versions = versions,
-                selectedCategory = selectedCategory,
-                categories = categories,
-                onCategoryChange = { selectedCategory = it },
-                allItems = allItems,
-                filtered = filtered,
-                vm = vm,
-            )
-            HomeTab.STATS -> StatsTab(padding, allItems)
-            HomeTab.SETTINGS -> SettingsTab(
-                padding = padding,
-                onExport = { createExportLauncher.launch("zzz_progress_backup.json") },
-                onImport = { importLauncher.launch(arrayOf("application/json")) },
-                onReset = vm::resetProgress,
-            )
+        ) { padding ->
+            when (tab) {
+                HomeTab.LIST -> ListTab(
+                    padding = padding,
+                    onlyTodo = ui.onlyTodo,
+                    query = ui.query,
+                    selectedVersion = ui.selectedVersion,
+                    versions = versions,
+                    selectedCategory = selectedCategory,
+                    categories = categories,
+                    onCategoryChange = { selectedCategory = it },
+                    allItems = allItems,
+                    filtered = filtered,
+                    vm = vm,
+                )
+                HomeTab.STATS -> StatsTab(padding, allItems)
+                HomeTab.SETTINGS -> SettingsTab(
+                    padding = padding,
+                    themeMode = ui.themeMode,
+                    onThemeModeChange = vm::setThemeMode,
+                    onExport = { createExportLauncher.launch("zzz_progress_backup.json") },
+                    onImport = { importLauncher.launch(arrayOf("application/json")) },
+                    onReset = vm::resetProgress,
+                )
+            }
         }
     }
 }
@@ -256,12 +262,20 @@ private fun StatsTab(padding: PaddingValues, allItems: List<AchievementItem>) {
 @Composable
 private fun SettingsTab(
     padding: PaddingValues,
+    themeMode: ThemeMode,
+    onThemeModeChange: (ThemeMode) -> Unit,
     onExport: () -> Unit,
     onImport: () -> Unit,
     onReset: () -> Unit,
 ) {
     Column(modifier = Modifier.padding(padding).fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("数据管理", style = MaterialTheme.typography.titleLarge)
+        Text("主题模式", style = MaterialTheme.typography.labelMedium)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(selected = themeMode == ThemeMode.SYSTEM, onClick = { onThemeModeChange(ThemeMode.SYSTEM) }, label = { Text("跟随系统") })
+            FilterChip(selected = themeMode == ThemeMode.LIGHT, onClick = { onThemeModeChange(ThemeMode.LIGHT) }, label = { Text("浅色") })
+            FilterChip(selected = themeMode == ThemeMode.DARK, onClick = { onThemeModeChange(ThemeMode.DARK) }, label = { Text("深色") })
+        }
         OutlinedButton(onClick = onExport, modifier = Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(14.dp)) {
             Icon(Icons.Rounded.FileDownload, contentDescription = null)
             Text("  导出进度 JSON")
