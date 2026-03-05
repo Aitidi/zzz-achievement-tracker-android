@@ -13,86 +13,54 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.aitidi.zzztracker.model.AchievementItem
-
-private enum class Tab(val title: String) { LIST("成就"), STATS("统计"), SETTINGS("设置") }
+import com.aitidi.zzztracker.viewmodel.TrackerViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TrackerApp() {
-    var currentTab by remember { mutableStateOf(Tab.LIST) }
-    val allItems = remember {
-        mutableStateListOf(
-            AchievementItem("zzz_1", "自费鞭策自己", "解锁六分街的「COFF CAFE」。", "v1.0", "雅努斯区", true),
-            AchievementItem("zzz_2", "拼装达人", "将任意音擎等级提升至20级。", "v1.0", "绳匠业务", false),
-            AchievementItem("zzz_3", "迷宫的跨越者", "通关第100阶层。", "v1.3", "战斗成就", false),
-        )
+fun TrackerApp(vm: TrackerViewModel = viewModel()) {
+    val ui by vm.ui.collectAsStateWithLifecycle()
+    val allItems by vm.items.collectAsStateWithLifecycle()
+
+    val filtered = allItems.filter {
+        val todoOk = !ui.onlyTodo || !it.progress
+        val q = ui.query.trim()
+        val qOk = q.isBlank() || it.name.contains(q, true) || it.description.contains(q, true) || it.category.contains(q, true)
+        todoOk && qOk
     }
 
-    Scaffold(
-        topBar = { TopAppBar(title = { Text("ZZZ 成就追踪器") }) },
-        bottomBar = {
-            NavigationBar {
-                Tab.entries.forEach { tab ->
-                    NavigationBarItem(
-                        selected = currentTab == tab,
-                        onClick = { currentTab = tab },
-                        icon = {},
-                        label = { Text(tab.title) }
-                    )
-                }
+    Scaffold(topBar = { TopAppBar(title = { Text("ZZZ 成就追踪器") }) }) { padding ->
+        Column(modifier = Modifier.padding(padding).fillMaxSize()) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("已完成 ${allItems.count { it.progress }} / ${allItems.size}", style = MaterialTheme.typography.titleMedium)
+                FilterChip(selected = ui.onlyTodo, onClick = { vm.setOnlyTodo(!ui.onlyTodo) }, label = { Text("仅未完成") })
             }
-        }
-    ) { padding ->
-        when (currentTab) {
-            Tab.LIST -> AchievementListScreen(items = allItems, modifier = Modifier.padding(padding))
-            Tab.STATS -> StatsScreen(items = allItems, modifier = Modifier.padding(padding))
-            Tab.SETTINGS -> SettingsScreen(modifier = Modifier.padding(padding))
-        }
-    }
-}
 
-@Composable
-private fun AchievementListScreen(items: List<AchievementItem>, modifier: Modifier = Modifier) {
-    var onlyTodo by remember { mutableStateOf(true) }
-    val display = if (onlyTodo) items.filter { !it.进度 } else items
+            OutlinedTextField(
+                value = ui.query,
+                onValueChange = vm::setQuery,
+                label = { Text("搜索成就/描述/分类") },
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)
+            )
 
-    Column(modifier = modifier.fillMaxSize()) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text("共  项", style = MaterialTheme.typography.titleMedium)
-            FilterChip(selected = onlyTodo, onClick = { onlyTodo = !onlyTodo }, label = { Text("仅未完成") })
-        }
-
-        LazyColumn(contentPadding = PaddingValues(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(display, key = { it.id }) { item ->
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Checkbox(checked = item.进度, onCheckedChange = null)
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(item.成就名, style = MaterialTheme.typography.titleMedium)
-                        Text(item.描述, style = MaterialTheme.typography.bodyMedium)
-                        Text(" · ", style = MaterialTheme.typography.labelSmall)
-                    }
+            LazyColumn(contentPadding = PaddingValues(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(filtered, key = { it.id }) { item ->
+                    AchievementRow(item = item, onToggle = vm::toggle)
                 }
             }
         }
@@ -100,23 +68,13 @@ private fun AchievementListScreen(items: List<AchievementItem>, modifier: Modifi
 }
 
 @Composable
-private fun StatsScreen(items: List<AchievementItem>, modifier: Modifier = Modifier) {
-    val done = items.count { it.进度 }
-    val total = items.size
-    Column(modifier = modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("总进度", style = MaterialTheme.typography.titleLarge)
-        Text(" / ", style = MaterialTheme.typography.headlineMedium)
-        Text("后续将加入：按分类/版本统计、图表、最近完成。")
-    }
-}
-
-@Composable
-private fun SettingsScreen(modifier: Modifier = Modifier) {
-    Column(modifier = modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("设置", style = MaterialTheme.typography.titleLarge)
-        Text("- 导入成就库 JSON")
-        Text("- 导出/导入本地进度 JSON")
-        Text("- 勾选后自动跳下一条（开关）")
-        Text("- 默认仅看未完成（开关）")
+private fun AchievementRow(item: AchievementItem, onToggle: (AchievementItem, Boolean) -> Unit) {
+    Row(modifier = Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Checkbox(checked = item.progress, onCheckedChange = { onToggle(item, it) })
+        Column(modifier = Modifier.weight(1f)) {
+            Text(item.name, style = MaterialTheme.typography.titleMedium)
+            Text(item.description, style = MaterialTheme.typography.bodyMedium)
+            Text("${item.category} · ${item.version}", style = MaterialTheme.typography.labelSmall)
+        }
     }
 }
