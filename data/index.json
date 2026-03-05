@@ -1,0 +1,82 @@
+{
+  "generatedAt": "2026-03-05T23:39:09",
+  "source": "ZZZ_全成就_完整清单.json",
+  "total": 662,
+  "versions": [
+    {
+      "version": "v1.0",
+      "file": "data/versions/v1.0.json",
+      "total": 243
+    },
+    {
+      "version": "v1.1",
+      "file": "data/versions/v1.1.json",
+      "total": 35
+    },
+    {
+      "version": "v1.2",
+      "file": "data/versions/v1.2.json",
+      "total": 31
+    },
+    {
+      "version": "v1.3",
+      "file": "data/versions/v1.3.json",
+      "total": 20
+    },
+    {
+      "version": "v1.4",
+      "file": "data/versions/v1.4.json",
+      "total": 53
+    },
+    {
+      "version": "v1.5",
+      "file": "data/versions/v1.5.json",
+      "total": 27
+    },
+    {
+      "version": "v1.6",
+      "file": "data/versions/v1.6.json",
+      "total": 25
+    },
+    {
+      "version": "v1.7",
+      "file": "data/versions/v1.7.json",
+      "total": 17
+    },
+    {
+      "version": "v2.0",
+      "file": "data/versions/v2.0.json",
+      "total": 67
+    },
+    {
+      "version": "v2.1",
+      "file": "data/versions/v2.1.json",
+      "total": 33
+    },
+    {
+      "version": "v2.2",
+      "file": "data/versions/v2.2.json",
+      "total": 15
+    },
+    {
+      "version": "v2.3",
+      "file": "data/versions/v2.3.json",
+      "total": 23
+    },
+    {
+      "version": "v2.4",
+      "file": "data/versions/v2.4.json",
+      "total": 13
+    },
+    {
+      "version": "v2.5",
+      "file": "data/versions/v2.5.json",
+      "total": 27
+    },
+    {
+      "version": "v2.6",
+      "file": "data/versions/v2.6.json",
+      "total": 33
+    }
+  ]
+}

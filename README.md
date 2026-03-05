@@ -13,3 +13,10 @@
 - data/ 成就主数据与示例
 - docs/ PRD 与设计文档
 - scripts/ 数据转换与校验脚本
+
+## 成就数据组织（版本化）
+- data/index.json：版本索引与统计
+- data/versions/vX.Y.json：按游戏版本拆分的成就包
+- pp/src/main/assets/achievements_master.json：App 启动种子（聚合）
+
+说明：版本包中的 进度 默认置为 alse，用户完成状态由 App 本地数据库维护。
