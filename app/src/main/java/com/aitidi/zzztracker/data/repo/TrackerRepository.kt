@@ -18,17 +18,17 @@ class TrackerRepository(private val context: Context, private val dao: Achieveme
 
     suspend fun ensureSeeded() {
         if (dao.totalCount() > 0) return
+
+        val fromVersionPacks = loadFromVersionPacks()
+        if (fromVersionPacks.isNotEmpty()) {
+            dao.upsertAll(fromVersionPacks)
+            return
+        }
+
+        // fallback: single aggregate file
         val text = context.assets.open("achievements_master.json").bufferedReader().use { it.readText() }
         val payload = json.decodeFromString(MasterPayload.serializer(), text)
-        val mapped = payload.items.map { raw ->
-            val name = raw.成就名 ?: raw.name ?: ""
-            val desc = raw.描述 ?: raw.description ?: ""
-            val ver = raw.版本 ?: raw.version ?: "unknown"
-            val cat = raw.分类 ?: raw.category ?: "未分类"
-            val id = raw.id ?: stableId(name, ver, cat)
-            AchievementEntity(id, name, desc, ver, cat, raw.进度 ?: false)
-        }
-        dao.upsertAll(mapped)
+        dao.upsertAll(payload.items.map { it.toEntity() })
     }
 
     suspend fun toggle(id: String, progress: Boolean) = dao.updateProgress(id, progress)
@@ -38,6 +38,29 @@ class TrackerRepository(private val context: Context, private val dao: Achieveme
         return json.encodeToString(ExportPayload.serializer(), ExportPayload(items))
     }
 
+    private fun loadFromVersionPacks(): List<AchievementEntity> {
+        return try {
+            val indexText = context.assets.open("data/index.json").bufferedReader().use { it.readText() }
+            val index = json.decodeFromString(VersionIndex.serializer(), indexText)
+            index.versions.flatMap { ver ->
+                val verText = context.assets.open(ver.file).bufferedReader().use { it.readText() }
+                val payload = json.decodeFromString(VersionPayload.serializer(), verText)
+                payload.items.map { it.toEntity() }
+            }
+        } catch (_: Exception) {
+            emptyList()
+        }
+    }
+
+    private fun RawItem.toEntity(): AchievementEntity {
+        val n = 成就名 ?: name ?: ""
+        val d = 描述 ?: description ?: ""
+        val v = 版本 ?: version ?: "unknown"
+        val c = 分类 ?: category ?: "未分类"
+        val resolvedId = id ?: stableId(n, v, c)
+        return AchievementEntity(resolvedId, n, d, v, c, false)
+    }
+
     private fun stableId(name: String, version: String, category: String): String {
         val hash = MessageDigest.getInstance("SHA-1").digest("$name|$version|$category".toByteArray())
         return hash.joinToString("") { "%02x".format(it) }
@@ -45,6 +68,27 @@ class TrackerRepository(private val context: Context, private val dao: Achieveme
 }
 
 private fun AchievementEntity.toModel() = AchievementItem(id, name, description, version, category, progress)
+
+@Serializable
+data class VersionIndex(
+    val generatedAt: String? = null,
+    val total: Int? = null,
+    val versions: List<VersionEntry> = emptyList(),
+)
+
+@Serializable
+data class VersionEntry(
+    val version: String,
+    val file: String,
+    val total: Int,
+)
+
+@Serializable
+data class VersionPayload(
+    val version: String,
+    val total: Int,
+    val items: List<RawItem> = emptyList(),
+)
 
 @Serializable
 data class MasterPayload(

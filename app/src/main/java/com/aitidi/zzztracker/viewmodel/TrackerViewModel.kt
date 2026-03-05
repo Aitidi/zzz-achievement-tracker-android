@@ -16,6 +16,7 @@ import kotlinx.coroutines.launch
 data class TrackerUiState(
     val onlyTodo: Boolean = true,
     val query: String = "",
+    val selectedVersion: String = "全部",
 )
 
 class TrackerViewModel(app: Application) : AndroidViewModel(app) {
@@ -35,6 +36,10 @@ class TrackerViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setQuery(v: String) {
         _ui.value = _ui.value.copy(query = v)
+    }
+
+    fun setVersion(v: String) {
+        _ui.value = _ui.value.copy(selectedVersion = v)
     }
 
     fun toggle(item: AchievementItem, checked: Boolean) {
