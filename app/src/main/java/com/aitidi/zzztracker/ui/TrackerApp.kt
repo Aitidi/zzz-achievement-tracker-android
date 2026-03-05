@@ -2,6 +2,7 @@ package com.aitidi.zzztracker.ui
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -22,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.FileDownload
 import androidx.compose.material.icons.rounded.FileUpload
 import androidx.compose.material.icons.rounded.Restore
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -63,6 +64,8 @@ fun TrackerApp(vm: TrackerViewModel = viewModel()) {
     val ui by vm.ui.collectAsStateWithLifecycle()
     val allItems by vm.items.collectAsStateWithLifecycle()
     val versions = listOf("全部") + allItems.map { it.version }.distinct().sorted()
+    val categories = listOf("全部") + allItems.map { it.category }.distinct().sorted()
+    var selectedCategory by remember { mutableStateOf("全部") }
     var tab by remember { mutableStateOf(HomeTab.LIST) }
     val snackbar = remember { SnackbarHostState() }
 
@@ -80,7 +83,8 @@ fun TrackerApp(vm: TrackerViewModel = viewModel()) {
         val q = ui.query.trim()
         val qOk = q.isBlank() || it.name.contains(q, true) || it.description.contains(q, true) || it.category.contains(q, true)
         val verOk = ui.selectedVersion == "全部" || it.version == ui.selectedVersion
-        todoOk && qOk && verOk
+        val catOk = selectedCategory == "全部" || it.category == selectedCategory
+        todoOk && qOk && verOk && catOk
     }
 
     Scaffold(
@@ -95,7 +99,19 @@ fun TrackerApp(vm: TrackerViewModel = viewModel()) {
         }
     ) { padding ->
         when (tab) {
-            HomeTab.LIST -> ListTab(padding, ui.onlyTodo, ui.query, ui.selectedVersion, versions, allItems, filtered, vm)
+            HomeTab.LIST -> ListTab(
+                padding = padding,
+                onlyTodo = ui.onlyTodo,
+                query = ui.query,
+                selectedVersion = ui.selectedVersion,
+                versions = versions,
+                selectedCategory = selectedCategory,
+                categories = categories,
+                onCategoryChange = { selectedCategory = it },
+                allItems = allItems,
+                filtered = filtered,
+                vm = vm,
+            )
             HomeTab.STATS -> StatsTab(padding, allItems)
             HomeTab.SETTINGS -> SettingsTab(
                 padding = padding,
@@ -114,6 +130,9 @@ private fun ListTab(
     query: String,
     selectedVersion: String,
     versions: List<String>,
+    selectedCategory: String,
+    categories: List<String>,
+    onCategoryChange: (String) -> Unit,
     allItems: List<AchievementItem>,
     filtered: List<AchievementItem>,
     vm: TrackerViewModel,
@@ -136,9 +155,15 @@ private fun ListTab(
             Text("${filtered.size} 项", style = MaterialTheme.typography.labelMedium)
         }
 
-        LazyRow(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        LazyRow(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(versions) { ver ->
                 FilterChip(selected = selectedVersion == ver, onClick = { vm.setVersion(ver) }, label = { Text(ver) })
+            }
+        }
+
+        LazyRow(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(categories) { cat ->
+                FilterChip(selected = selectedCategory == cat, onClick = { onCategoryChange(cat) }, label = { Text(cat) })
             }
         }
 
@@ -160,6 +185,7 @@ private fun AppleSummaryCard(done: Int, total: Int) {
         Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("总进度", style = MaterialTheme.typography.labelMedium)
             Text("$done / $total", style = MaterialTheme.typography.headlineMedium)
+            Text("${"%.1f".format(progress * 100)}%", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
             Box(modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(999.dp)).background(Color(0x14000000))) {
                 Box(modifier = Modifier.fillMaxWidth(progress).fillMaxHeight().background(MaterialTheme.colorScheme.primary))
             }
@@ -169,6 +195,11 @@ private fun AppleSummaryCard(done: Int, total: Int) {
 
 @Composable
 private fun AchievementCard(item: AchievementItem, onToggle: (AchievementItem, Boolean) -> Unit) {
+    val badgeColor by animateColorAsState(
+        if (item.progress) Color(0x2630D158) else Color(0x220A84FF),
+        label = "badge"
+    )
+
     Card(
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -177,10 +208,18 @@ private fun AchievementCard(item: AchievementItem, onToggle: (AchievementItem, B
     ) {
         Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Checkbox(checked = item.progress, onCheckedChange = { onToggle(item, it) })
-            Column(modifier = Modifier.weight(1f)) {
-                Text(item.name, style = MaterialTheme.typography.titleMedium)
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(item.name, style = MaterialTheme.typography.titleMedium)
+                    AssistChip(onClick = {}, label = { Text(if (item.progress) "已完成" else "进行中") })
+                }
                 Text(item.description, style = MaterialTheme.typography.bodyMedium)
-                Text("${item.category} · ${item.version}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Box(modifier = Modifier.clip(RoundedCornerShape(999.dp)).background(badgeColor).padding(horizontal = 8.dp, vertical = 3.dp)) {
+                        Text(item.category, style = MaterialTheme.typography.labelMedium)
+                    }
+                    Text(item.version, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                }
             }
         }
     }
@@ -189,7 +228,6 @@ private fun AchievementCard(item: AchievementItem, onToggle: (AchievementItem, B
 @Composable
 private fun StatsTab(padding: PaddingValues, allItems: List<AchievementItem>) {
     val grouped = allItems.groupBy { it.version }.toSortedMap()
-    val maxCount = (grouped.maxOfOrNull { it.value.size } ?: 1).toFloat()
 
     Column(modifier = Modifier.padding(padding).fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         AppleSummaryCard(allItems.count { it.progress }, allItems.size)
@@ -199,16 +237,14 @@ private fun StatsTab(padding: PaddingValues, allItems: List<AchievementItem>) {
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 grouped.forEach { (ver, list) ->
                     val done = list.count { it.progress }
-                    val weight = list.size / maxCount
+                    val p = if (list.isEmpty()) 0f else done.toFloat() / list.size.toFloat()
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text(ver, style = MaterialTheme.typography.labelMedium)
-                            Text("$done/${list.size}", style = MaterialTheme.typography.labelMedium)
+                            Text("$done/${list.size}  (${"%.0f".format(p * 100)}%)", style = MaterialTheme.typography.labelMedium)
                         }
                         Box(modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(999.dp)).background(Color(0x12000000))) {
-                            Box(modifier = Modifier.fillMaxWidth(weight).fillMaxHeight().background(Color(0x330A84FF)))
-                            val p = if (list.isEmpty()) 0f else done.toFloat() / list.size
-                            Box(modifier = Modifier.fillMaxWidth(p * weight).fillMaxHeight().background(MaterialTheme.colorScheme.primary))
+                            Box(modifier = Modifier.fillMaxWidth(p).fillMaxHeight().background(MaterialTheme.colorScheme.primary))
                         }
                     }
                 }
