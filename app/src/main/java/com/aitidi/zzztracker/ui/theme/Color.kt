@@ -2,12 +2,13 @@ package com.aitidi.zzztracker.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val NeonBlue = Color(0xFF3D7CFF)
-val Mint = Color(0xFF35D0A2)
-val Violet = Color(0xFF8A6DFF)
+val AccentBlue = Color(0xFF0A84FF)
+val AccentGreen = Color(0xFF30D158)
 
-val DarkBg = Color(0xFF0C1020)
-val DarkSurface = Color(0xFF171C31)
+val DarkBg = Color(0xFF000000)
+val DarkSurface = Color(0xFF1C1C1E)
+val DarkCard = Color(0xFF2C2C2E)
 
-val LightBg = Color(0xFFF4F7FF)
+val LightBg = Color(0xFFF5F5F7)
 val LightSurface = Color(0xFFFFFFFF)
+val LightCard = Color(0xFFF2F2F7)

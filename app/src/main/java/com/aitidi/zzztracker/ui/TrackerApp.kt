@@ -8,9 +8,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -43,7 +46,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -79,7 +84,7 @@ fun TrackerApp(vm: TrackerViewModel = viewModel()) {
     }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Zenless 成就追踪") }) },
+        topBar = { TopAppBar(title = { Text("ZZZ Achievements", fontWeight = FontWeight.SemiBold) }) },
         snackbarHost = { SnackbarHost(snackbar) },
         bottomBar = {
             NavigationBar {
@@ -115,65 +120,48 @@ private fun ListTab(
 ) {
     val done = allItems.count { it.progress }
 
-    Column(modifier = Modifier.padding(padding).fillMaxSize().padding(horizontal = 12.dp)) {
-        ProgressHero(done = done, total = allItems.size)
+    Column(modifier = Modifier.padding(padding).fillMaxSize().padding(horizontal = 14.dp)) {
+        AppleSummaryCard(done, allItems.size)
 
         OutlinedTextField(
             value = query,
             onValueChange = vm::setQuery,
-            label = { Text("搜索成就/描述/分类") },
-            modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+            label = { Text("搜索成就") },
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier.fillMaxWidth().padding(top = 10.dp)
         )
 
-        Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+        Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             FilterChip(selected = onlyTodo, onClick = { vm.setOnlyTodo(!onlyTodo) }, label = { Text("仅未完成") })
-            Text("当前显示 ${filtered.size} 项", style = MaterialTheme.typography.labelLarge)
+            Text("${filtered.size} 项", style = MaterialTheme.typography.labelMedium)
         }
 
-        LazyRow(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
+        LazyRow(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(versions) { ver ->
-                FilterChip(
-                    selected = selectedVersion == ver,
-                    onClick = { vm.setVersion(ver) },
-                    label = { Text(ver) }
-                )
+                FilterChip(selected = selectedVersion == ver, onClick = { vm.setVersion(ver) }, label = { Text(ver) })
             }
         }
 
-        LazyColumn(contentPadding = PaddingValues(bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        LazyColumn(contentPadding = PaddingValues(bottom = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(filtered, key = { it.id }) { item -> AchievementCard(item = item, onToggle = vm::toggle) }
         }
     }
 }
 
 @Composable
-private fun ProgressHero(done: Int, total: Int) {
+private fun AppleSummaryCard(done: Int, total: Int) {
     val progress = if (total == 0) 0f else done.toFloat() / total.toFloat()
     Card(
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    brush = Brush.horizontalGradient(
-                        listOf(
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.25f),
-                            MaterialTheme.colorScheme.tertiary.copy(alpha = 0.25f),
-                        )
-                    )
-                )
-                .padding(16.dp)
-        ) {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("完成进度", style = MaterialTheme.typography.labelLarge)
-                Text("$done / $total", style = MaterialTheme.typography.headlineMedium)
-                Text("${"%.1f".format(progress * 100)}%", style = MaterialTheme.typography.bodyLarge)
+        Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("总进度", style = MaterialTheme.typography.labelMedium)
+            Text("$done / $total", style = MaterialTheme.typography.headlineMedium)
+            Box(modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(999.dp)).background(Color(0x14000000))) {
+                Box(modifier = Modifier.fillMaxWidth(progress).fillMaxHeight().background(MaterialTheme.colorScheme.primary))
             }
         }
     }
@@ -184,6 +172,7 @@ private fun AchievementCard(item: AchievementItem, onToggle: (AchievementItem, B
     Card(
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -191,7 +180,7 @@ private fun AchievementCard(item: AchievementItem, onToggle: (AchievementItem, B
             Column(modifier = Modifier.weight(1f)) {
                 Text(item.name, style = MaterialTheme.typography.titleMedium)
                 Text(item.description, style = MaterialTheme.typography.bodyMedium)
-                Text("${item.category} · ${item.version}", style = MaterialTheme.typography.labelMedium)
+                Text("${item.category} · ${item.version}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
             }
         }
     }
@@ -200,17 +189,26 @@ private fun AchievementCard(item: AchievementItem, onToggle: (AchievementItem, B
 @Composable
 private fun StatsTab(padding: PaddingValues, allItems: List<AchievementItem>) {
     val grouped = allItems.groupBy { it.version }.toSortedMap()
-    Column(modifier = Modifier.padding(padding).fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        ProgressHero(done = allItems.count { it.progress }, total = allItems.size)
-        Text("按版本统计", style = MaterialTheme.typography.titleMedium)
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            grouped.forEach { (ver, list) ->
-                val done = list.count { it.progress }
-                item {
-                    Card(shape = RoundedCornerShape(14.dp)) {
-                        Row(modifier = Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text(ver)
-                            Text("$done / ${list.size}")
+    val maxCount = (grouped.maxOfOrNull { it.value.size } ?: 1).toFloat()
+
+    Column(modifier = Modifier.padding(padding).fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        AppleSummaryCard(allItems.count { it.progress }, allItems.size)
+
+        Text("版本完成图", style = MaterialTheme.typography.titleMedium)
+        Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                grouped.forEach { (ver, list) ->
+                    val done = list.count { it.progress }
+                    val weight = list.size / maxCount
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text(ver, style = MaterialTheme.typography.labelMedium)
+                            Text("$done/${list.size}", style = MaterialTheme.typography.labelMedium)
+                        }
+                        Box(modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(999.dp)).background(Color(0x12000000))) {
+                            Box(modifier = Modifier.fillMaxWidth(weight).fillMaxHeight().background(Color(0x330A84FF)))
+                            val p = if (list.isEmpty()) 0f else done.toFloat() / list.size
+                            Box(modifier = Modifier.fillMaxWidth(p * weight).fillMaxHeight().background(MaterialTheme.colorScheme.primary))
                         }
                     }
                 }
@@ -228,15 +226,15 @@ private fun SettingsTab(
 ) {
     Column(modifier = Modifier.padding(padding).fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("数据管理", style = MaterialTheme.typography.titleLarge)
-        OutlinedButton(onClick = onExport, modifier = Modifier.fillMaxWidth()) {
+        OutlinedButton(onClick = onExport, modifier = Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(14.dp)) {
             Icon(Icons.Rounded.FileDownload, contentDescription = null)
             Text("  导出进度 JSON")
         }
-        OutlinedButton(onClick = onImport, modifier = Modifier.fillMaxWidth()) {
+        OutlinedButton(onClick = onImport, modifier = Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(14.dp)) {
             Icon(Icons.Rounded.FileUpload, contentDescription = null)
             Text("  导入进度 JSON")
         }
-        OutlinedButton(onClick = onReset, modifier = Modifier.fillMaxWidth()) {
+        OutlinedButton(onClick = onReset, modifier = Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(14.dp)) {
             Icon(Icons.Rounded.Restore, contentDescription = null)
             Text("  重置全部进度")
         }

@@ -7,17 +7,15 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 
 private val DarkColors = darkColorScheme(
-    primary = NeonBlue,
-    secondary = Mint,
-    tertiary = Violet,
+    primary = AccentBlue,
+    secondary = AccentGreen,
     background = DarkBg,
     surface = DarkSurface,
 )
 
 private val LightColors = lightColorScheme(
-    primary = NeonBlue,
-    secondary = Mint,
-    tertiary = Violet,
+    primary = AccentBlue,
+    secondary = AccentGreen,
     background = LightBg,
     surface = LightSurface,
 )
