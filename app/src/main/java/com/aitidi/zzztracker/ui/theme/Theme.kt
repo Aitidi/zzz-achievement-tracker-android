@@ -10,24 +10,46 @@ enum class ThemeMode { SYSTEM, LIGHT, DARK }
 
 private val DarkColors = darkColorScheme(
     primary = IOSBlue,
-    secondary = IOSGreen,
+    onPrimary = androidx.compose.ui.graphics.Color.White,
+    primaryContainer = androidx.compose.ui.graphics.Color(0x332A9BFF),
+    onPrimaryContainer = androidx.compose.ui.graphics.Color(0xFFD9ECFF),
+
+    secondary = IOSBlue,
+    onSecondary = androidx.compose.ui.graphics.Color.White,
+    secondaryContainer = androidx.compose.ui.graphics.Color(0x332A9BFF),
+    onSecondaryContainer = androidx.compose.ui.graphics.Color(0xFFD9ECFF),
+
+    tertiary = IOSBlue,
+    tertiaryContainer = androidx.compose.ui.graphics.Color(0x332A9BFF),
+    onTertiaryContainer = androidx.compose.ui.graphics.Color(0xFFD9ECFF),
+
     background = DarkBackground,
     surface = DarkSurface,
     surfaceVariant = DarkSurface,
-    tertiary = IOSBlue,
-    tertiaryContainer = DarkSurface,
+
     onBackground = androidx.compose.ui.graphics.Color(0xFFF2F2F7),
     onSurface = androidx.compose.ui.graphics.Color(0xFFF2F2F7),
 )
 
 private val LightColors = lightColorScheme(
     primary = IOSBlue,
-    secondary = IOSGreen,
+    onPrimary = androidx.compose.ui.graphics.Color.White,
+    primaryContainer = androidx.compose.ui.graphics.Color(0xFFD9ECFF),
+    onPrimaryContainer = androidx.compose.ui.graphics.Color(0xFF004A87),
+
+    secondary = IOSBlue,
+    onSecondary = androidx.compose.ui.graphics.Color.White,
+    secondaryContainer = androidx.compose.ui.graphics.Color(0xFFD9ECFF),
+    onSecondaryContainer = androidx.compose.ui.graphics.Color(0xFF004A87),
+
+    tertiary = IOSBlue,
+    tertiaryContainer = androidx.compose.ui.graphics.Color(0xFFD9ECFF),
+    onTertiaryContainer = androidx.compose.ui.graphics.Color(0xFF004A87),
+
     background = LightBackground,
     surface = LightSurface,
     surfaceVariant = LightBackground,
-    tertiary = IOSBlue,
-    tertiaryContainer = LightSurface,
+
     onBackground = androidx.compose.ui.graphics.Color(0xFF1C1C1E),
     onSurface = androidx.compose.ui.graphics.Color(0xFF1C1C1E),
 )

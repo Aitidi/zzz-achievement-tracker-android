@@ -101,15 +101,15 @@ fun TrackerApp(vm: TrackerViewModel = viewModel()) {
                 onDismissRequest = { showFilterSheet = false },
                 containerColor = MaterialTheme.colorScheme.surface
             ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text("版本", style = MaterialTheme.typography.titleMedium)
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         items(versions) { v ->
                             FilterChip(selected = ui.selectedVersion == v, onClick = { vm.setVersion(v) }, label = { Text(v) })
                         }
                     }
                     Text("分类", style = MaterialTheme.typography.titleMedium)
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         items(categories) { c ->
                             FilterChip(selected = ui.selectedCategory == c, onClick = { vm.setCategory(c) }, label = { Text(c) })
                         }
@@ -194,7 +194,7 @@ private fun ListTab(
 ) {
     val done = allItems.count { it.progress }
 
-    Column(modifier = Modifier.padding(padding).fillMaxSize().padding(horizontal = 10.dp)) {
+    Column(modifier = Modifier.padding(padding).fillMaxSize().padding(horizontal = 12.dp)) {
         SummaryCard(done = done, total = allItems.size)
 
         OutlinedTextField(
@@ -202,15 +202,15 @@ private fun ListTab(
             onValueChange = vm::setQuery,
             label = { Text("搜索成就") },
             shape = RoundedCornerShape(14.dp),
-            modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+            modifier = Modifier.fillMaxWidth().padding(top = 10.dp)
         )
 
         Row(
-            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 FilterChip(selected = ui.onlyTodo, onClick = { vm.setOnlyTodo(!ui.onlyTodo) }, label = { Text("仅未完成") })
                 FilterChip(
                     selected = ui.selectedVersion != "全部" || ui.selectedCategory != "全部",
@@ -229,8 +229,8 @@ private fun ListTab(
             }
         }
 
-        val itemSpacing = if (ui.compactMode) 2.dp else 8.dp
-        LazyColumn(contentPadding = PaddingValues(top = 6.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(itemSpacing)) {
+        val itemSpacing = if (ui.compactMode) 4.dp else 8.dp
+        LazyColumn(contentPadding = PaddingValues(top = 8.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(itemSpacing)) {
             items(filtered, key = { it.id }) { item -> AchievementRow(item = item, compact = ui.compactMode, onToggle = vm::toggle) }
         }
     }
@@ -243,9 +243,9 @@ private fun SummaryCard(done: Int, total: Int) {
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp),
-        modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text("总进度", style = MaterialTheme.typography.labelMedium)
             Text("$done / $total", style = MaterialTheme.typography.titleLarge)
             Text("剩余 ${total - done} · ${"%.1f".format(progress * 100)}%", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
@@ -258,8 +258,8 @@ private fun SummaryCard(done: Int, total: Int) {
 
 @Composable
 private fun AchievementRow(item: AchievementItem, compact: Boolean, onToggle: (AchievementItem, Boolean) -> Unit) {
-    val hPad = if (compact) 8.dp else 12.dp
-    val vPad = if (compact) 4.dp else 8.dp
+    val hPad = if (compact) 10.dp else 12.dp
+    val vPad = if (compact) 6.dp else 8.dp
 
     Card(
         shape = RoundedCornerShape(if (compact) 10.dp else 14.dp),
@@ -269,7 +269,7 @@ private fun AchievementRow(item: AchievementItem, compact: Boolean, onToggle: (A
     ) {
         Row(modifier = Modifier.fillMaxWidth().padding(horizontal = hPad, vertical = vPad), verticalAlignment = Alignment.CenterVertically) {
             Checkbox(checked = item.progress, onCheckedChange = { onToggle(item, it) })
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                     Text(item.name, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleMedium)
                     Text(if (item.progress) "●" else "○", color = if (item.progress) MaterialTheme.colorScheme.secondary else Color(0x668E8E93))
@@ -310,7 +310,7 @@ private fun StatsTab(padding: PaddingValues, allItems: List<AchievementItem>) {
 
     Column(modifier = Modifier.padding(padding).fillMaxSize().padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-            Row(modifier = Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(modifier = Modifier.fillMaxWidth().padding(10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                 RingProgress(percent = if (total == 0) 0f else done.toFloat() / total)
                 Column {
                     Text("总完成率", style = MaterialTheme.typography.labelMedium)
@@ -320,7 +320,7 @@ private fun StatsTab(padding: PaddingValues, allItems: List<AchievementItem>) {
         }
 
         Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("版本柱状图", style = MaterialTheme.typography.titleMedium)
                 grouped.forEach { (ver, list) ->
                     val d = list.count { it.progress }
@@ -377,14 +377,14 @@ private fun SettingsTab(
     onImport: () -> Unit,
     onReset: () -> Unit,
 ) {
-    Column(modifier = Modifier.padding(padding).fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(modifier = Modifier.padding(padding).fillMaxSize().padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text("显示设置", style = MaterialTheme.typography.titleLarge)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             FilterChip(selected = themeMode == ThemeMode.SYSTEM, onClick = { onThemeModeChange(ThemeMode.SYSTEM) }, label = { Text("跟随系统") })
             FilterChip(selected = themeMode == ThemeMode.LIGHT, onClick = { onThemeModeChange(ThemeMode.LIGHT) }, label = { Text("浅色") })
             FilterChip(selected = themeMode == ThemeMode.DARK, onClick = { onThemeModeChange(ThemeMode.DARK) }, label = { Text("深色") })
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             FilterChip(selected = compactMode, onClick = { onCompactModeChange(true) }, label = { Text("紧凑") })
             FilterChip(selected = !compactMode, onClick = { onCompactModeChange(false) }, label = { Text("舒适") })
         }
