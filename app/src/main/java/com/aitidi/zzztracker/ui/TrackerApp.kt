@@ -1,9 +1,12 @@
 package com.aitidi.zzztracker.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -41,7 +44,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -52,6 +57,8 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -200,33 +207,48 @@ private fun ListTab(
     val done = allItems.count { it.progress }
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
+    val searchInteraction = remember { MutableInteractionSource() }
+    val isSearchFocused by searchInteraction.collectIsFocusedAsState()
+
+    fun dismissSearch() {
+        keyboardController?.hide()
+        focusManager.clearFocus()
+    }
+
+    BackHandler(enabled = isSearchFocused) { dismissSearch() }
 
     Column(modifier = Modifier.padding(padding).fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp)) {
         SummaryCard(done = done, total = allItems.size)
 
-        OutlinedTextField(
-            value = ui.query,
-            onValueChange = vm::setQuery,
-            label = { Text("搜索成就") },
-            placeholder = { Text("输入关键词") },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            keyboardActions = KeyboardActions(
-                onSearch = {
-                    keyboardController?.hide()
-                    focusManager.clearFocus()
-                },
-                onDone = {
-                    keyboardController?.hide()
-                    focusManager.clearFocus()
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OutlinedTextField(
+                value = ui.query,
+                onValueChange = vm::setQuery,
+                interactionSource = searchInteraction,
+                placeholder = { Text("搜索成就 / 输入关键词") },
+                singleLine = true,
+                textStyle = MaterialTheme.typography.bodyLarge,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(
+                    onSearch = { dismissSearch() },
+                    onDone = { dismissSearch() }
+                ),
+                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier
+                    .weight(1f)
+                    .height(56.dp)
+            )
+
+            AnimatedVisibility(visible = isSearchFocused) {
+                TextButton(onClick = { dismissSearch() }) {
+                    Text("退出")
                 }
-            ),
-            shape = RoundedCornerShape(14.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 10.dp)
-                .height(56.dp)
-        )
+            }
+        }
 
         Row(
             modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
@@ -253,7 +275,17 @@ private fun ListTab(
         }
 
         val itemSpacing = if (ui.compactMode) 4.dp else 8.dp
-        LazyColumn(contentPadding = PaddingValues(top = 8.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(itemSpacing)) {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(isSearchFocused) {
+                    detectTapGestures(onTap = {
+                        if (isSearchFocused) dismissSearch()
+                    })
+                },
+            contentPadding = PaddingValues(top = 8.dp, bottom = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(itemSpacing)
+        ) {
             items(filtered, key = { it.id }) { item -> AchievementRow(item = item, compact = ui.compactMode, onToggle = vm::toggle) }
         }
     }
