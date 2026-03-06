@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.requiredHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -194,7 +195,7 @@ private fun ListTab(
 ) {
     val done = allItems.count { it.progress }
 
-    Column(modifier = Modifier.padding(padding).fillMaxSize().padding(horizontal = 12.dp)) {
+    Column(modifier = Modifier.padding(padding).fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp)) {
         SummaryCard(done = done, total = allItems.size)
 
         OutlinedTextField(
@@ -202,7 +203,7 @@ private fun ListTab(
             onValueChange = vm::setQuery,
             label = { Text("搜索成就") },
             shape = RoundedCornerShape(14.dp),
-            modifier = Modifier.fillMaxWidth().padding(top = 10.dp)
+            modifier = Modifier.fillMaxWidth().padding(top = 10.dp).requiredHeight(38.dp)
         )
 
         Row(
