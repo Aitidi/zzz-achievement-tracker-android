@@ -21,7 +21,9 @@ data class TrackerUiState(
     val onlyTodo: Boolean = true,
     val query: String = "",
     val selectedVersion: String = "全部",
+    val selectedCategory: String = "全部",
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    val compactMode: Boolean = true,
 )
 
 class TrackerViewModel(app: Application) : AndroidViewModel(app) {
@@ -41,7 +43,9 @@ class TrackerViewModel(app: Application) : AndroidViewModel(app) {
     fun setOnlyTodo(v: Boolean) { _ui.value = _ui.value.copy(onlyTodo = v) }
     fun setQuery(v: String) { _ui.value = _ui.value.copy(query = v) }
     fun setVersion(v: String) { _ui.value = _ui.value.copy(selectedVersion = v) }
+    fun setCategory(v: String) { _ui.value = _ui.value.copy(selectedCategory = v) }
     fun setThemeMode(v: ThemeMode) { _ui.value = _ui.value.copy(themeMode = v) }
+    fun setCompactMode(v: Boolean) { _ui.value = _ui.value.copy(compactMode = v) }
 
     fun toggle(item: AchievementItem, checked: Boolean) {
         viewModelScope.launch { repo.toggle(item.id, checked) }
