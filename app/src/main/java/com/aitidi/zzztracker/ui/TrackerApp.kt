@@ -71,7 +71,7 @@ private enum class HomeTab(val title: String) { LIST("成就"), STATS("统计"),
 fun TrackerApp(vm: TrackerViewModel = viewModel()) {
     val ui by vm.ui.collectAsStateWithLifecycle()
     val allItems by vm.items.collectAsStateWithLifecycle()
-    val versions = listOf("全部") + allItems.map { it.version }.distinct().sorted()
+    val versions = listOf("全部") + allItems.map { it.version }.distinct().sortedDescending()
     val categories = listOf("全部") + allItems.map { it.category }.distinct().sorted()
     var tab by remember { mutableStateOf(HomeTab.LIST) }
     var showFilterSheet by remember { mutableStateOf(false) }
@@ -97,7 +97,10 @@ fun TrackerApp(vm: TrackerViewModel = viewModel()) {
 
     ZzzTrackerTheme(mode = ui.themeMode) {
         if (showFilterSheet) {
-            ModalBottomSheet(onDismissRequest = { showFilterSheet = false }) {
+            ModalBottomSheet(
+                onDismissRequest = { showFilterSheet = false },
+                containerColor = MaterialTheme.colorScheme.surface
+            ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text("版本", style = MaterialTheme.typography.titleMedium)
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -116,10 +119,34 @@ fun TrackerApp(vm: TrackerViewModel = viewModel()) {
         }
 
         Scaffold(
-            topBar = { TopAppBar(title = { Text("绝区零成就") }) },
+            containerColor = MaterialTheme.colorScheme.background,
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("绝区零成就")
+                            val latestVersion = versions.firstOrNull { it != "全部" }
+                            if (latestVersion != null) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(999.dp))
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                                        .padding(horizontal = 8.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = latestVersion,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                        }
+                    }
+                )
+            },
             snackbarHost = { SnackbarHost(snackbar) },
             bottomBar = {
-                NavigationBar {
+                NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
                     HomeTab.entries.forEach {
                         NavigationBarItem(
                             selected = tab == it,
@@ -248,16 +275,36 @@ private fun AchievementRow(item: AchievementItem, compact: Boolean, onToggle: (A
                     Text(if (item.progress) "●" else "○", color = if (item.progress) MaterialTheme.colorScheme.secondary else Color(0x668E8E93))
                 }
                 Text(item.description, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium, color = Color(0xCC8E8E93))
-                Text("${item.category} · ${item.version}", maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelMedium, color = Color(0xCC8E8E93))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    MetaTag(text = item.category)
+                    MetaTag(text = item.version)
+                }
             }
         }
     }
 }
 
 @Composable
+private fun MetaTag(text: String) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(999.dp))
+            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f))
+            .padding(horizontal = 8.dp, vertical = 2.dp)
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.primary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
 private fun StatsTab(padding: PaddingValues, allItems: List<AchievementItem>) {
     val grouped = allItems.groupBy { it.version }.toList().sortedBy { it.first }
-    val top3 = grouped.map { it.first to (it.second.size - it.second.count { a -> a.progress }) }.sortedByDescending { it.second }.take(3)
     val done = allItems.count { it.progress }
     val total = allItems.size
 
@@ -289,14 +336,6 @@ private fun StatsTab(padding: PaddingValues, allItems: List<AchievementItem>) {
             }
         }
 
-        Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("未完成最多 Top3", style = MaterialTheme.typography.titleMedium)
-                top3.forEachIndexed { i, pair ->
-                    Text("${i + 1}. ${pair.first}：剩余 ${pair.second}", style = MaterialTheme.typography.bodyMedium)
-                }
-            }
-        }
     }
 }
 

@@ -13,6 +13,9 @@ private val DarkColors = darkColorScheme(
     secondary = IOSGreen,
     background = DarkBackground,
     surface = DarkSurface,
+    surfaceVariant = DarkSurface,
+    tertiary = IOSBlue,
+    tertiaryContainer = DarkSurface,
     onBackground = androidx.compose.ui.graphics.Color(0xFFF2F2F7),
     onSurface = androidx.compose.ui.graphics.Color(0xFFF2F2F7),
 )
@@ -22,6 +25,9 @@ private val LightColors = lightColorScheme(
     secondary = IOSGreen,
     background = LightBackground,
     surface = LightSurface,
+    surfaceVariant = LightBackground,
+    tertiary = IOSBlue,
+    tertiaryContainer = LightSurface,
     onBackground = androidx.compose.ui.graphics.Color(0xFF1C1C1E),
     onSurface = androidx.compose.ui.graphics.Color(0xFF1C1C1E),
 )
