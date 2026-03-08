@@ -5,6 +5,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -42,7 +44,6 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -331,23 +332,14 @@ private fun ListTab(
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                 FilterChip(selected = ui.onlyTodo, onClick = { vm.setOnlyTodo(!ui.onlyTodo) }, label = { Text("仅未完成") })
-                OutlinedIconButton(
-                    onClick = onOpenFilter,
-                    modifier = Modifier.size(40.dp)
-                ) {
+                IconRectButton(onClick = onOpenFilter) {
                     Icon(Icons.Rounded.FilterList, contentDescription = "筛选")
                 }
-                OutlinedIconButton(
-                    onClick = onOpenSort,
-                    modifier = Modifier.size(40.dp)
-                ) {
+                IconRectButton(onClick = onOpenSort) {
                     Icon(Icons.Rounded.SwapVert, contentDescription = "排序")
                 }
             }
-            OutlinedIconButton(
-                onClick = vm::toggleLockProgressEditing,
-                modifier = Modifier.size(40.dp)
-            ) {
+            IconRectButton(onClick = vm::toggleLockProgressEditing) {
                 Icon(
                     if (ui.lockProgressEditing) Icons.Rounded.Lock else Icons.Rounded.LockOpen,
                     contentDescription = if (ui.lockProgressEditing) "已锁定" else "未锁定"
@@ -410,6 +402,23 @@ private fun ListTab(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun IconRectButton(
+    onClick: () -> Unit,
+    content: @Composable () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .size(40.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        content()
     }
 }
 
