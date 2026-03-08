@@ -83,8 +83,8 @@ private enum class HomeTab(val title: String) { LIST("成就"), STATS("统计"),
 fun TrackerApp(vm: TrackerViewModel = viewModel()) {
     val ui by vm.ui.collectAsStateWithLifecycle()
     val allItems by vm.items.collectAsStateWithLifecycle()
-    val versions = listOf("全部") + allItems.map { it.version }.distinct().sortedDescending()
-    val categories = listOf("全部") + allItems.map { it.category }.distinct().sorted()
+    val versions = allItems.map { it.version }.distinct().sortedDescending()
+    val categories = allItems.map { it.category }.distinct().sorted()
     var tab by remember { mutableStateOf(HomeTab.LIST) }
     var showFilterSheet by remember { mutableStateOf(false) }
     val snackbar = remember { SnackbarHostState() }
@@ -102,8 +102,8 @@ fun TrackerApp(vm: TrackerViewModel = viewModel()) {
         val todoOk = !ui.onlyTodo || !it.progress
         val q = ui.query.trim()
         val qOk = q.isBlank() || it.name.contains(q, true) || it.description.contains(q, true) || it.category.contains(q, true)
-        val verOk = ui.selectedVersion == "全部" || it.version == ui.selectedVersion
-        val catOk = ui.selectedCategory == "全部" || it.category == ui.selectedCategory
+        val verOk = ui.selectedVersions.isEmpty() || it.version in ui.selectedVersions
+        val catOk = ui.selectedCategories.isEmpty() || it.category in ui.selectedCategories
         todoOk && qOk && verOk && catOk
     }
 
@@ -114,16 +114,38 @@ fun TrackerApp(vm: TrackerViewModel = viewModel()) {
                 containerColor = MaterialTheme.colorScheme.surface
             ) {
                 Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("版本", style = MaterialTheme.typography.titleMedium)
+                    Text("版本（可多选）", style = MaterialTheme.typography.titleMedium)
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        item {
+                            FilterChip(
+                                selected = ui.selectedVersions.isEmpty(),
+                                onClick = vm::clearVersionFilter,
+                                label = { Text("全部") }
+                            )
+                        }
                         items(versions) { v ->
-                            FilterChip(selected = ui.selectedVersion == v, onClick = { vm.setVersion(v) }, label = { Text(v) })
+                            FilterChip(
+                                selected = v in ui.selectedVersions,
+                                onClick = { vm.toggleVersion(v) },
+                                label = { Text(v) }
+                            )
                         }
                     }
-                    Text("分类", style = MaterialTheme.typography.titleMedium)
+                    Text("分类（可多选）", style = MaterialTheme.typography.titleMedium)
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        item {
+                            FilterChip(
+                                selected = ui.selectedCategories.isEmpty(),
+                                onClick = vm::clearCategoryFilter,
+                                label = { Text("全部") }
+                            )
+                        }
                         items(categories) { c ->
-                            FilterChip(selected = ui.selectedCategory == c, onClick = { vm.setCategory(c) }, label = { Text(c) })
+                            FilterChip(
+                                selected = c in ui.selectedCategories,
+                                onClick = { vm.toggleCategory(c) },
+                                label = { Text(c) }
+                            )
                         }
                     }
                 }
@@ -137,7 +159,7 @@ fun TrackerApp(vm: TrackerViewModel = viewModel()) {
                     title = {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text("绝区零成就")
-                            val latestVersion = versions.firstOrNull { it != "全部" }
+                            val latestVersion = versions.firstOrNull()
                             if (latestVersion != null) {
                                 Box(
                                     modifier = Modifier
@@ -258,7 +280,7 @@ private fun ListTab(
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 FilterChip(selected = ui.onlyTodo, onClick = { vm.setOnlyTodo(!ui.onlyTodo) }, label = { Text("仅未完成") })
                 FilterChip(
-                    selected = ui.selectedVersion != "全部" || ui.selectedCategory != "全部",
+                    selected = ui.selectedVersions.isNotEmpty() || ui.selectedCategories.isNotEmpty(),
                     onClick = onOpenFilter,
                     label = { Text("筛选") },
                     leadingIcon = { Icon(Icons.Rounded.FilterList, contentDescription = null) }
@@ -267,10 +289,22 @@ private fun ListTab(
             Text("${filtered.size} 项", style = MaterialTheme.typography.labelMedium)
         }
 
-        if (ui.selectedVersion != "全部" || ui.selectedCategory != "全部") {
+        if (ui.selectedVersions.isNotEmpty() || ui.selectedCategories.isNotEmpty()) {
             LazyRow(modifier = Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                if (ui.selectedVersion != "全部") item { FilterChip(selected = true, onClick = { vm.setVersion("全部") }, label = { Text("版本:${ui.selectedVersion}") }) }
-                if (ui.selectedCategory != "全部") item { FilterChip(selected = true, onClick = { vm.setCategory("全部") }, label = { Text("分类:${ui.selectedCategory}") }) }
+                items(ui.selectedVersions.toList().sortedDescending()) { v ->
+                    FilterChip(
+                        selected = true,
+                        onClick = { vm.toggleVersion(v) },
+                        label = { Text("版本:$v") }
+                    )
+                }
+                items(ui.selectedCategories.toList().sorted()) { c ->
+                    FilterChip(
+                        selected = true,
+                        onClick = { vm.toggleCategory(c) },
+                        label = { Text("分类:$c") }
+                    )
+                }
             }
         }
 

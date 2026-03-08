@@ -20,8 +20,8 @@ import kotlinx.coroutines.launch
 data class TrackerUiState(
     val onlyTodo: Boolean = true,
     val query: String = "",
-    val selectedVersion: String = "全部",
-    val selectedCategory: String = "全部",
+    val selectedVersions: Set<String> = emptySet(),
+    val selectedCategories: Set<String> = emptySet(),
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val compactMode: Boolean = true,
 )
@@ -42,8 +42,24 @@ class TrackerViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setOnlyTodo(v: Boolean) { _ui.value = _ui.value.copy(onlyTodo = v) }
     fun setQuery(v: String) { _ui.value = _ui.value.copy(query = v) }
-    fun setVersion(v: String) { _ui.value = _ui.value.copy(selectedVersion = v) }
-    fun setCategory(v: String) { _ui.value = _ui.value.copy(selectedCategory = v) }
+
+    fun toggleVersion(v: String) {
+        val next = _ui.value.selectedVersions.toMutableSet().apply {
+            if (contains(v)) remove(v) else add(v)
+        }
+        _ui.value = _ui.value.copy(selectedVersions = next)
+    }
+
+    fun toggleCategory(v: String) {
+        val next = _ui.value.selectedCategories.toMutableSet().apply {
+            if (contains(v)) remove(v) else add(v)
+        }
+        _ui.value = _ui.value.copy(selectedCategories = next)
+    }
+
+    fun clearVersionFilter() { _ui.value = _ui.value.copy(selectedVersions = emptySet()) }
+    fun clearCategoryFilter() { _ui.value = _ui.value.copy(selectedCategories = emptySet()) }
+
     fun setThemeMode(v: ThemeMode) { _ui.value = _ui.value.copy(themeMode = v) }
     fun setCompactMode(v: Boolean) { _ui.value = _ui.value.copy(compactMode = v) }
 
