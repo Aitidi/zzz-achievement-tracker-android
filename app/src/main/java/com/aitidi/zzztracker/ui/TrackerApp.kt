@@ -332,14 +332,23 @@ private fun ListTab(
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                 FilterChip(selected = ui.onlyTodo, onClick = { vm.setOnlyTodo(!ui.onlyTodo) }, label = { Text("仅未完成") })
-                IconRectButton(onClick = onOpenFilter) {
+                IconRectButton(
+                    selected = ui.selectedVersions.isNotEmpty() || ui.selectedCategories.isNotEmpty(),
+                    onClick = onOpenFilter
+                ) {
                     Icon(Icons.Rounded.FilterList, contentDescription = "筛选")
                 }
-                IconRectButton(onClick = onOpenSort) {
+                IconRectButton(
+                    selected = ui.sortMode != SortMode.VERSION_DESC,
+                    onClick = onOpenSort
+                ) {
                     Icon(Icons.Rounded.SwapVert, contentDescription = "排序")
                 }
             }
-            IconRectButton(onClick = vm::toggleLockProgressEditing) {
+            IconRectButton(
+                selected = ui.lockProgressEditing,
+                onClick = vm::toggleLockProgressEditing
+            ) {
                 Icon(
                     if (ui.lockProgressEditing) Icons.Rounded.Lock else Icons.Rounded.LockOpen,
                     contentDescription = if (ui.lockProgressEditing) "已锁定" else "未锁定"
@@ -407,15 +416,21 @@ private fun ListTab(
 
 @Composable
 private fun IconRectButton(
+    selected: Boolean,
     onClick: () -> Unit,
     content: @Composable () -> Unit
 ) {
+    val shape = RoundedCornerShape(10.dp)
+    val bg = if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
+    val border = if (selected) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outline
+
     Box(
         modifier = Modifier
             .width(40.dp)
             .height(32.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
+            .clip(shape)
+            .background(bg)
+            .border(1.dp, border, shape)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
