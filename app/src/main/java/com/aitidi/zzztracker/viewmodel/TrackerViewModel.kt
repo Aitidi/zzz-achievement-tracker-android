@@ -17,11 +17,20 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+enum class SortMode(val label: String) {
+    VERSION_DESC("版本新→旧"),
+    VERSION_ASC("版本旧→新"),
+    STATUS("完成状态"),
+    NAME("名称")
+}
+
 data class TrackerUiState(
     val onlyTodo: Boolean = true,
     val query: String = "",
     val selectedVersions: Set<String> = emptySet(),
     val selectedCategories: Set<String> = emptySet(),
+    val sortMode: SortMode = SortMode.VERSION_DESC,
+    val lockProgressEditing: Boolean = false,
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val compactMode: Boolean = true,
 )
@@ -59,6 +68,11 @@ class TrackerViewModel(app: Application) : AndroidViewModel(app) {
 
     fun clearVersionFilter() { _ui.value = _ui.value.copy(selectedVersions = emptySet()) }
     fun clearCategoryFilter() { _ui.value = _ui.value.copy(selectedCategories = emptySet()) }
+
+    fun setSortMode(v: SortMode) { _ui.value = _ui.value.copy(sortMode = v) }
+    fun toggleLockProgressEditing() {
+        _ui.value = _ui.value.copy(lockProgressEditing = !_ui.value.lockProgressEditing)
+    }
 
     fun setThemeMode(v: ThemeMode) { _ui.value = _ui.value.copy(themeMode = v) }
     fun setCompactMode(v: Boolean) { _ui.value = _ui.value.copy(compactMode = v) }

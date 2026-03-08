@@ -27,7 +27,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.FilterList
 import androidx.compose.material.icons.rounded.FileDownload
 import androidx.compose.material.icons.rounded.FileUpload
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.LockOpen
 import androidx.compose.material.icons.rounded.Restore
+import androidx.compose.material.icons.rounded.Sort
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -74,6 +77,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.aitidi.zzztracker.model.AchievementItem
 import com.aitidi.zzztracker.ui.theme.ThemeMode
 import com.aitidi.zzztracker.ui.theme.ZzzTrackerTheme
+import com.aitidi.zzztracker.viewmodel.SortMode
 import com.aitidi.zzztracker.viewmodel.TrackerViewModel
 
 private enum class HomeTab(val title: String) { LIST("成就"), STATS("统计"), SETTINGS("设置") }
@@ -105,6 +109,13 @@ fun TrackerApp(vm: TrackerViewModel = viewModel()) {
         val verOk = ui.selectedVersions.isEmpty() || it.version in ui.selectedVersions
         val catOk = ui.selectedCategories.isEmpty() || it.category in ui.selectedCategories
         todoOk && qOk && verOk && catOk
+    }
+
+    val sortedFiltered = when (ui.sortMode) {
+        SortMode.VERSION_DESC -> filtered.sortedWith(compareByDescending<AchievementItem> { it.version }.thenBy { it.name })
+        SortMode.VERSION_ASC -> filtered.sortedWith(compareBy<AchievementItem> { it.version }.thenBy { it.name })
+        SortMode.STATUS -> filtered.sortedWith(compareBy<AchievementItem> { it.progress }.thenByDescending { it.version }.thenBy { it.name })
+        SortMode.NAME -> filtered.sortedBy { it.name }
     }
 
     ZzzTrackerTheme(mode = ui.themeMode) {
@@ -197,7 +208,7 @@ fun TrackerApp(vm: TrackerViewModel = viewModel()) {
                     padding = padding,
                     ui = ui,
                     allItems = allItems,
-                    filtered = filtered,
+                    filtered = sortedFiltered,
                     onOpenFilter = { showFilterSheet = true },
                     vm = vm,
                 )
@@ -285,6 +296,31 @@ private fun ListTab(
                     label = { Text("筛选") },
                     leadingIcon = { Icon(Icons.Rounded.FilterList, contentDescription = null) }
                 )
+                FilterChip(
+                    selected = ui.sortMode != SortMode.VERSION_DESC,
+                    onClick = {
+                        val next = when (ui.sortMode) {
+                            SortMode.VERSION_DESC -> SortMode.VERSION_ASC
+                            SortMode.VERSION_ASC -> SortMode.STATUS
+                            SortMode.STATUS -> SortMode.NAME
+                            SortMode.NAME -> SortMode.VERSION_DESC
+                        }
+                        vm.setSortMode(next)
+                    },
+                    label = { Text(ui.sortMode.label) },
+                    leadingIcon = { Icon(Icons.Rounded.Sort, contentDescription = null) }
+                )
+                FilterChip(
+                    selected = ui.lockProgressEditing,
+                    onClick = vm::toggleLockProgressEditing,
+                    label = { Text(if (ui.lockProgressEditing) "已锁定" else "未锁定") },
+                    leadingIcon = {
+                        Icon(
+                            if (ui.lockProgressEditing) Icons.Rounded.Lock else Icons.Rounded.LockOpen,
+                            contentDescription = null
+                        )
+                    }
+                )
             }
             Text("${filtered.size} 项", style = MaterialTheme.typography.labelMedium)
         }
@@ -308,7 +344,7 @@ private fun ListTab(
             }
         }
 
-        val itemSpacing = if (ui.compactMode) 4.dp else 8.dp
+        val itemSpacing = if (ui.compactMode) 4.dp else 12.dp
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -320,7 +356,14 @@ private fun ListTab(
             contentPadding = PaddingValues(top = 8.dp, bottom = 12.dp),
             verticalArrangement = Arrangement.spacedBy(itemSpacing)
         ) {
-            items(filtered, key = { it.id }) { item -> AchievementRow(item = item, compact = ui.compactMode, onToggle = vm::toggle) }
+            items(filtered, key = { it.id }) { item ->
+                AchievementRow(
+                    item = item,
+                    compact = ui.compactMode,
+                    lockProgressEditing = ui.lockProgressEditing,
+                    onToggle = vm::toggle
+                )
+            }
         }
     }
 }
@@ -346,24 +389,44 @@ private fun SummaryCard(done: Int, total: Int) {
 }
 
 @Composable
-private fun AchievementRow(item: AchievementItem, compact: Boolean, onToggle: (AchievementItem, Boolean) -> Unit) {
-    val hPad = if (compact) 10.dp else 12.dp
-    val vPad = if (compact) 6.dp else 8.dp
+private fun AchievementRow(
+    item: AchievementItem,
+    compact: Boolean,
+    lockProgressEditing: Boolean,
+    onToggle: (AchievementItem, Boolean) -> Unit
+) {
+    val hPad = if (compact) 10.dp else 14.dp
+    val vPad = if (compact) 6.dp else 12.dp
 
     Card(
-        shape = RoundedCornerShape(if (compact) 10.dp else 14.dp),
+        shape = RoundedCornerShape(if (compact) 10.dp else 16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (compact) 0.5.dp else 1.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(modifier = Modifier.fillMaxWidth().padding(horizontal = hPad, vertical = vPad), verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(checked = item.progress, onCheckedChange = { onToggle(item, it) })
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Checkbox(
+                checked = item.progress,
+                enabled = !lockProgressEditing,
+                onCheckedChange = { checked -> if (!lockProgressEditing) onToggle(item, checked) }
+            )
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(if (compact) 4.dp else 6.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                    Text(item.name, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        item.name,
+                        maxLines = if (compact) 1 else 2,
+                        overflow = TextOverflow.Ellipsis,
+                        style = if (compact) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge
+                    )
                     Text(if (item.progress) "●" else "○", color = if (item.progress) MaterialTheme.colorScheme.secondary else Color(0x668E8E93))
                 }
-                Text(item.description, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium, color = Color(0xCC8E8E93))
+                Text(
+                    item.description,
+                    maxLines = if (compact) 1 else 2,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color(0xCC8E8E93)
+                )
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                     MetaTag(text = item.category)
                     MetaTag(text = item.version)
@@ -480,11 +543,11 @@ private fun SettingsTab(
 
         Text("数据管理", style = MaterialTheme.typography.titleLarge)
         OutlinedButton(onClick = onExport, modifier = Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(14.dp)) {
-            Icon(Icons.Rounded.FileDownload, contentDescription = null)
+            Icon(Icons.Rounded.FileUpload, contentDescription = null)
             Text("  导出进度 JSON")
         }
         OutlinedButton(onClick = onImport, modifier = Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(14.dp)) {
-            Icon(Icons.Rounded.FileUpload, contentDescription = null)
+            Icon(Icons.Rounded.FileDownload, contentDescription = null)
             Text("  导入进度 JSON")
         }
         OutlinedButton(onClick = onReset, modifier = Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(14.dp)) {
