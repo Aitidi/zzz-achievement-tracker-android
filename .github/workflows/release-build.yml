@@ -42,7 +42,15 @@ jobs:
           VERSION_NAME=$(grep -E 'versionName\s*=\s*"' app/build.gradle.kts | sed -E 's/.*"([^"]+)".*/\1/')
           VERSION_CODE=$(grep -E 'versionCode\s*=\s*[0-9]+' app/build.gradle.kts | sed -E 's/.*=\s*([0-9]+).*/\1/')
           OUT="zzz-achievement-tracker-v${VERSION_NAME}+${VERSION_CODE}-release.apk"
-          cp app/build/outputs/apk/release/app-release.apk "$OUT"
+
+          APK_PATH=$(find app/build/outputs/apk/release -maxdepth 1 -type f -name "*.apk" | head -n 1)
+          if [ -z "$APK_PATH" ]; then
+            echo "No APK produced under app/build/outputs/apk/release"
+            ls -R app/build/outputs/apk || true
+            exit 1
+          fi
+
+          cp "$APK_PATH" "$OUT"
           echo "APK_NAME=$OUT" >> $GITHUB_ENV
 
       - uses: actions/upload-artifact@v4
