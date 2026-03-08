@@ -42,6 +42,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -330,31 +331,28 @@ private fun ListTab(
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                 FilterChip(selected = ui.onlyTodo, onClick = { vm.setOnlyTodo(!ui.onlyTodo) }, label = { Text("仅未完成") })
-                FilterChip(
-                    selected = ui.selectedVersions.isNotEmpty() || ui.selectedCategories.isNotEmpty(),
+                OutlinedIconButton(
                     onClick = onOpenFilter,
-                    label = { },
-                    leadingIcon = { Icon(Icons.Rounded.FilterList, contentDescription = "筛选") }
-                )
-                FilterChip(
-                    selected = ui.sortMode != SortMode.VERSION_DESC,
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Icon(Icons.Rounded.FilterList, contentDescription = "筛选")
+                }
+                OutlinedIconButton(
                     onClick = onOpenSort,
-                    label = { },
-                    leadingIcon = { Icon(Icons.Rounded.SwapVert, contentDescription = "排序") }
-                )
-                FilterChip(
-                    selected = ui.lockProgressEditing,
-                    onClick = vm::toggleLockProgressEditing,
-                    label = { Text(if (ui.lockProgressEditing) "已锁定" else "未锁定") },
-                    leadingIcon = {
-                        Icon(
-                            if (ui.lockProgressEditing) Icons.Rounded.Lock else Icons.Rounded.LockOpen,
-                            contentDescription = null
-                        )
-                    }
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Icon(Icons.Rounded.SwapVert, contentDescription = "排序")
+                }
+            }
+            OutlinedIconButton(
+                onClick = vm::toggleLockProgressEditing,
+                modifier = Modifier.size(40.dp)
+            ) {
+                Icon(
+                    if (ui.lockProgressEditing) Icons.Rounded.Lock else Icons.Rounded.LockOpen,
+                    contentDescription = if (ui.lockProgressEditing) "已锁定" else "未锁定"
                 )
             }
-            Text("${filtered.size} 项", style = MaterialTheme.typography.labelMedium)
         }
 
         if (ui.selectedVersions.isNotEmpty() || ui.selectedCategories.isNotEmpty()) {
