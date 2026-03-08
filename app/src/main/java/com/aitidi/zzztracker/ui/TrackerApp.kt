@@ -412,7 +412,8 @@ private fun IconRectButton(
 ) {
     Box(
         modifier = Modifier
-            .size(40.dp)
+            .width(40.dp)
+            .height(32.dp)
             .clip(RoundedCornerShape(12.dp))
             .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
             .clickable(onClick = onClick),
