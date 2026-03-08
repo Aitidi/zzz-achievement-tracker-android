@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -20,10 +22,50 @@ android {
         vectorDrawables { useSupportLibrary = true }
     }
 
+    val keystoreProps = Properties().apply {
+        val file = rootProject.file("keystore.properties")
+        if (file.exists()) {
+            file.inputStream().use(::load)
+        }
+    }
+
+    fun propOrEnv(propKey: String, envKey: String): String? {
+        return (keystoreProps.getProperty(propKey) ?: System.getenv(envKey))?.takeIf { it.isNotBlank() }
+    }
+
+    val releaseStoreFile = propOrEnv("storeFile", "ANDROID_KEYSTORE_PATH")
+    val releaseStorePassword = propOrEnv("storePassword", "ANDROID_KEYSTORE_PASSWORD")
+    val releaseKeyAlias = propOrEnv("keyAlias", "ANDROID_KEY_ALIAS")
+    val releaseKeyPassword = propOrEnv("keyPassword", "ANDROID_KEY_PASSWORD")
+
+    signingConfigs {
+        create("release") {
+            if (!releaseStoreFile.isNullOrBlank() &&
+                !releaseStorePassword.isNullOrBlank() &&
+                !releaseKeyAlias.isNullOrBlank() &&
+                !releaseKeyPassword.isNullOrBlank()
+            ) {
+                storeFile = file(releaseStoreFile)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+                enableV1Signing = true
+                enableV2Signing = true
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            if (!releaseStoreFile.isNullOrBlank() &&
+                !releaseStorePassword.isNullOrBlank() &&
+                !releaseKeyAlias.isNullOrBlank() &&
+                !releaseKeyPassword.isNullOrBlank()
+            ) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
     compileOptions {

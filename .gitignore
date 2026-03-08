@@ -14,3 +14,8 @@ Thumbs.db
 
 # Local release downloads
 release_artifacts/
+
+# Signing secrets
+keystore.properties
+*.jks
+*.keystore
