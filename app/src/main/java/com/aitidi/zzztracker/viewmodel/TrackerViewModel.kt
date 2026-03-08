@@ -1,6 +1,7 @@
 package com.aitidi.zzztracker.viewmodel
 
 import android.app.Application
+import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -29,6 +30,7 @@ data class TrackerUiState(
     val query: String = "",
     val selectedVersions: Set<String> = emptySet(),
     val selectedCategories: Set<String> = emptySet(),
+    val disabledVersions: Set<String> = emptySet(),
     val sortMode: SortMode = SortMode.VERSION_DESC,
     val lockProgressEditing: Boolean = false,
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
@@ -37,9 +39,10 @@ data class TrackerUiState(
 
 class TrackerViewModel(app: Application) : AndroidViewModel(app) {
     private val repo = TrackerRepository(app, AppDatabase.get(app).achievementDao())
+    private val prefs = app.getSharedPreferences("tracker_prefs", Context.MODE_PRIVATE)
 
     val items = repo.observeItems().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-    private val _ui = MutableStateFlow(TrackerUiState())
+    private val _ui = MutableStateFlow(loadUiState())
     val ui: StateFlow<TrackerUiState> = _ui.asStateFlow()
 
     private val _events = MutableSharedFlow<String>()
@@ -49,33 +52,43 @@ class TrackerViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { repo.ensureSeeded() }
     }
 
-    fun setOnlyTodo(v: Boolean) { _ui.value = _ui.value.copy(onlyTodo = v) }
-    fun setQuery(v: String) { _ui.value = _ui.value.copy(query = v) }
+    fun setOnlyTodo(v: Boolean) = updateUi { copy(onlyTodo = v) }
+    fun setQuery(v: String) = updateUi { copy(query = v) }
 
     fun toggleVersion(v: String) {
         val next = _ui.value.selectedVersions.toMutableSet().apply {
             if (contains(v)) remove(v) else add(v)
         }
-        _ui.value = _ui.value.copy(selectedVersions = next)
+        updateUi { copy(selectedVersions = next) }
     }
 
     fun toggleCategory(v: String) {
         val next = _ui.value.selectedCategories.toMutableSet().apply {
             if (contains(v)) remove(v) else add(v)
         }
-        _ui.value = _ui.value.copy(selectedCategories = next)
+        updateUi { copy(selectedCategories = next) }
     }
 
-    fun clearVersionFilter() { _ui.value = _ui.value.copy(selectedVersions = emptySet()) }
-    fun clearCategoryFilter() { _ui.value = _ui.value.copy(selectedCategories = emptySet()) }
+    fun clearVersionFilter() = updateUi { copy(selectedVersions = emptySet()) }
+    fun clearCategoryFilter() = updateUi { copy(selectedCategories = emptySet()) }
 
-    fun setSortMode(v: SortMode) { _ui.value = _ui.value.copy(sortMode = v) }
-    fun toggleLockProgressEditing() {
-        _ui.value = _ui.value.copy(lockProgressEditing = !_ui.value.lockProgressEditing)
+    fun setSortMode(v: SortMode) = updateUi { copy(sortMode = v) }
+    fun toggleLockProgressEditing() = updateUi { copy(lockProgressEditing = !lockProgressEditing) }
+
+    fun setThemeMode(v: ThemeMode) = updateUi { copy(themeMode = v) }
+    fun setCompactMode(v: Boolean) = updateUi { copy(compactMode = v) }
+
+    fun toggleVersionInstalled(version: String) {
+        val next = _ui.value.disabledVersions.toMutableSet().apply {
+            if (contains(version)) remove(version) else add(version)
+        }
+        updateUi {
+            copy(
+                disabledVersions = next,
+                selectedVersions = selectedVersions - next
+            )
+        }
     }
-
-    fun setThemeMode(v: ThemeMode) { _ui.value = _ui.value.copy(themeMode = v) }
-    fun setCompactMode(v: Boolean) { _ui.value = _ui.value.copy(compactMode = v) }
 
     fun toggle(item: AchievementItem, checked: Boolean) {
         viewModelScope.launch { repo.toggle(item.id, checked) }
@@ -85,7 +98,7 @@ class TrackerViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             runCatching { repo.exportProgressToUri(uri) }
                 .onSuccess { done -> _events.emit("导出完成：已完成 $done 项") }
-                .onFailure { _events.emit("导出失败：${it.message}") }
+                .onFailure { _events.emit("导出失败：${it.message ?: "未知错误"}") }
         }
     }
 
@@ -93,7 +106,7 @@ class TrackerViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             runCatching { repo.importProgressFromUri(uri) }
                 .onSuccess { r -> _events.emit("导入完成：应用 ${r.applied}/${r.source} 条") }
-                .onFailure { _events.emit("导入失败：${it.message}") }
+                .onFailure { _events.emit("导入失败：${it.message ?: "文件格式错误或内容无效"}") }
         }
     }
 
@@ -103,4 +116,44 @@ class TrackerViewModel(app: Application) : AndroidViewModel(app) {
             _events.emit("已重置全部进度")
         }
     }
+
+    private inline fun updateUi(mutator: TrackerUiState.() -> TrackerUiState) {
+        _ui.value = _ui.value.mutator()
+        persistUiState(_ui.value)
+    }
+
+    private fun loadUiState(): TrackerUiState {
+        val theme = runCatching { ThemeMode.valueOf(prefs.getString("themeMode", ThemeMode.SYSTEM.name)!!) }
+            .getOrDefault(ThemeMode.SYSTEM)
+        val sort = runCatching { SortMode.valueOf(prefs.getString("sortMode", SortMode.VERSION_DESC.name)!!) }
+            .getOrDefault(SortMode.VERSION_DESC)
+        return TrackerUiState(
+            onlyTodo = prefs.getBoolean("onlyTodo", true),
+            query = prefs.getString("query", "") ?: "",
+            selectedVersions = decodeSet(prefs.getString("selectedVersions", "") ?: ""),
+            selectedCategories = decodeSet(prefs.getString("selectedCategories", "") ?: ""),
+            disabledVersions = decodeSet(prefs.getString("disabledVersions", "") ?: ""),
+            sortMode = sort,
+            lockProgressEditing = prefs.getBoolean("lockProgressEditing", false),
+            themeMode = theme,
+            compactMode = prefs.getBoolean("compactMode", true),
+        )
+    }
+
+    private fun persistUiState(state: TrackerUiState) {
+        prefs.edit()
+            .putBoolean("onlyTodo", state.onlyTodo)
+            .putString("query", state.query)
+            .putString("selectedVersions", encodeSet(state.selectedVersions))
+            .putString("selectedCategories", encodeSet(state.selectedCategories))
+            .putString("disabledVersions", encodeSet(state.disabledVersions))
+            .putString("sortMode", state.sortMode.name)
+            .putBoolean("lockProgressEditing", state.lockProgressEditing)
+            .putString("themeMode", state.themeMode.name)
+            .putBoolean("compactMode", state.compactMode)
+            .apply()
+    }
+
+    private fun encodeSet(values: Set<String>): String = values.joinToString("\u001F")
+    private fun decodeSet(raw: String): Set<String> = raw.split("\u001F").filter { it.isNotBlank() }.toSet()
 }

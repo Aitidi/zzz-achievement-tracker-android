@@ -52,6 +52,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -88,7 +89,14 @@ fun TrackerApp(vm: TrackerViewModel = viewModel()) {
     val ui by vm.ui.collectAsStateWithLifecycle()
     val allItems by vm.items.collectAsStateWithLifecycle()
     val versions = allItems.map { it.version }.distinct().sortedDescending()
-    val categories = allItems.map { it.category }.distinct().sorted()
+    val installedVersions = versions.filterNot { it in ui.disabledVersions }
+    val categories = allItems
+        .asSequence()
+        .filter { it.version !in ui.disabledVersions }
+        .map { it.category }
+        .distinct()
+        .sorted()
+        .toList()
     var tab by remember { mutableStateOf(HomeTab.LIST) }
     var showFilterSheet by remember { mutableStateOf(false) }
     val snackbar = remember { SnackbarHostState() }
@@ -102,20 +110,25 @@ fun TrackerApp(vm: TrackerViewModel = viewModel()) {
 
     LaunchedEffect(Unit) { vm.events.collect { snackbar.showSnackbar(it) } }
 
-    val filtered = allItems.filter {
-        val todoOk = !ui.onlyTodo || !it.progress
-        val q = ui.query.trim()
-        val qOk = q.isBlank() || it.name.contains(q, true) || it.description.contains(q, true) || it.category.contains(q, true)
-        val verOk = ui.selectedVersions.isEmpty() || it.version in ui.selectedVersions
-        val catOk = ui.selectedCategories.isEmpty() || it.category in ui.selectedCategories
-        todoOk && qOk && verOk && catOk
-    }
+    val sortedFiltered by remember(allItems, ui) {
+        derivedStateOf {
+            val filtered = allItems.filter {
+                val installedOk = it.version !in ui.disabledVersions
+                val todoOk = !ui.onlyTodo || !it.progress
+                val q = ui.query.trim()
+                val qOk = q.isBlank() || it.name.contains(q, true) || it.description.contains(q, true) || it.category.contains(q, true)
+                val verOk = ui.selectedVersions.isEmpty() || it.version in ui.selectedVersions
+                val catOk = ui.selectedCategories.isEmpty() || it.category in ui.selectedCategories
+                installedOk && todoOk && qOk && verOk && catOk
+            }
 
-    val sortedFiltered = when (ui.sortMode) {
-        SortMode.VERSION_DESC -> filtered.sortedWith(compareByDescending<AchievementItem> { it.version }.thenBy { it.name })
-        SortMode.VERSION_ASC -> filtered.sortedWith(compareBy<AchievementItem> { it.version }.thenBy { it.name })
-        SortMode.STATUS -> filtered.sortedWith(compareBy<AchievementItem> { it.progress }.thenByDescending { it.version }.thenBy { it.name })
-        SortMode.NAME -> filtered.sortedBy { it.name }
+            when (ui.sortMode) {
+                SortMode.VERSION_DESC -> filtered.sortedWith(compareByDescending<AchievementItem> { it.version }.thenBy { it.name })
+                SortMode.VERSION_ASC -> filtered.sortedWith(compareBy<AchievementItem> { it.version }.thenBy { it.name })
+                SortMode.STATUS -> filtered.sortedWith(compareBy<AchievementItem> { it.progress }.thenByDescending { it.version }.thenBy { it.name })
+                SortMode.NAME -> filtered.sortedBy { it.name }
+            }
+        }
     }
 
     ZzzTrackerTheme(mode = ui.themeMode) {
@@ -134,7 +147,7 @@ fun TrackerApp(vm: TrackerViewModel = viewModel()) {
                                 label = { Text("全部") }
                             )
                         }
-                        items(versions) { v ->
+                        items(installedVersions) { v ->
                             FilterChip(
                                 selected = v in ui.selectedVersions,
                                 onClick = { vm.toggleVersion(v) },
@@ -170,7 +183,7 @@ fun TrackerApp(vm: TrackerViewModel = viewModel()) {
                     title = {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text("绝区零成就")
-                            val latestVersion = versions.firstOrNull()
+                            val latestVersion = installedVersions.firstOrNull()
                             if (latestVersion != null) {
                                 Box(
                                     modifier = Modifier
@@ -212,11 +225,14 @@ fun TrackerApp(vm: TrackerViewModel = viewModel()) {
                     onOpenFilter = { showFilterSheet = true },
                     vm = vm,
                 )
-                HomeTab.STATS -> StatsTab(padding, allItems)
+                HomeTab.STATS -> StatsTab(padding, allItems.filter { it.version !in ui.disabledVersions })
                 HomeTab.SETTINGS -> SettingsTab(
                     padding = padding,
                     themeMode = ui.themeMode,
                     compactMode = ui.compactMode,
+                    versions = versions,
+                    disabledVersions = ui.disabledVersions,
+                    onToggleVersionInstalled = vm::toggleVersionInstalled,
                     onThemeModeChange = vm::setThemeMode,
                     onCompactModeChange = vm::setCompactMode,
                     onExport = { createExportLauncher.launch("zzz_progress_backup.json") },
@@ -345,24 +361,39 @@ private fun ListTab(
         }
 
         val itemSpacing = if (ui.compactMode) 4.dp else 12.dp
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .pointerInput(isSearchFocused) {
-                    detectTapGestures(onTap = {
-                        if (isSearchFocused) dismissSearch()
-                    })
-                },
-            contentPadding = PaddingValues(top = 8.dp, bottom = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(itemSpacing)
-        ) {
-            items(filtered, key = { it.id }) { item ->
-                AchievementRow(
-                    item = item,
-                    compact = ui.compactMode,
-                    lockProgressEditing = ui.lockProgressEditing,
-                    onToggle = vm::toggle
+
+        if (filtered.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(
+                    text = if (ui.query.isNotBlank() || ui.selectedVersions.isNotEmpty() || ui.selectedCategories.isNotEmpty()) {
+                        "没有匹配结果，试试清空筛选"
+                    } else {
+                        "暂无成就数据或已全部隐藏"
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color(0xCC8E8E93)
                 )
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .pointerInput(isSearchFocused) {
+                        detectTapGestures(onTap = {
+                            if (isSearchFocused) dismissSearch()
+                        })
+                    },
+                contentPadding = PaddingValues(top = 8.dp, bottom = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(itemSpacing)
+            ) {
+                items(filtered, key = { it.id }, contentType = { "achievement" }) { item ->
+                    AchievementRow(
+                        item = item,
+                        compact = ui.compactMode,
+                        lockProgressEditing = ui.lockProgressEditing,
+                        onToggle = vm::toggle
+                    )
+                }
             }
         }
     }
@@ -461,33 +492,38 @@ private fun StatsTab(padding: PaddingValues, allItems: List<AchievementItem>) {
     val total = allItems.size
 
     Column(modifier = Modifier.padding(padding).fillMaxSize().padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-            Row(modifier = Modifier.fillMaxWidth().padding(10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                RingProgress(percent = if (total == 0) 0f else done.toFloat() / total)
-                Column {
-                    Text("总完成率", style = MaterialTheme.typography.labelMedium)
-                    Text("$done / $total", style = MaterialTheme.typography.titleLarge)
+        if (allItems.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("暂无可统计的成就数据", color = Color(0xCC8E8E93))
+            }
+        } else {
+            Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+                Row(modifier = Modifier.fillMaxWidth().padding(10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    RingProgress(percent = if (total == 0) 0f else done.toFloat() / total)
+                    Column {
+                        Text("总完成率", style = MaterialTheme.typography.labelMedium)
+                        Text("$done / $total", style = MaterialTheme.typography.titleLarge)
+                    }
                 }
             }
-        }
 
-        Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-            Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("版本柱状图", style = MaterialTheme.typography.titleMedium)
-                grouped.forEach { (ver, list) ->
-                    val d = list.count { it.progress }
-                    val p = if (list.isEmpty()) 0f else d.toFloat() / list.size.toFloat()
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(ver, modifier = Modifier.width(42.dp), style = MaterialTheme.typography.labelMedium)
-                        Box(modifier = Modifier.weight(1f).height(8.dp).clip(RoundedCornerShape(999.dp)).background(Color(0x12000000))) {
-                            Box(modifier = Modifier.fillMaxWidth(p).fillMaxHeight().background(MaterialTheme.colorScheme.primary))
+            Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+                Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("版本柱状图", style = MaterialTheme.typography.titleMedium)
+                    grouped.forEach { (ver, list) ->
+                        val d = list.count { it.progress }
+                        val p = if (list.isEmpty()) 0f else d.toFloat() / list.size.toFloat()
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(ver, modifier = Modifier.width(42.dp), style = MaterialTheme.typography.labelMedium)
+                            Box(modifier = Modifier.weight(1f).height(8.dp).clip(RoundedCornerShape(999.dp)).background(Color(0x12000000))) {
+                                Box(modifier = Modifier.fillMaxWidth(p).fillMaxHeight().background(MaterialTheme.colorScheme.primary))
+                            }
+                            Text("${"%.0f".format(p * 100)}%", style = MaterialTheme.typography.labelMedium)
                         }
-                        Text("${"%.0f".format(p * 100)}%", style = MaterialTheme.typography.labelMedium)
                     }
                 }
             }
         }
-
     }
 }
 
@@ -523,6 +559,9 @@ private fun SettingsTab(
     padding: PaddingValues,
     themeMode: ThemeMode,
     compactMode: Boolean,
+    versions: List<String>,
+    disabledVersions: Set<String>,
+    onToggleVersionInstalled: (String) -> Unit,
     onThemeModeChange: (ThemeMode) -> Unit,
     onCompactModeChange: (Boolean) -> Unit,
     onExport: () -> Unit,
@@ -539,6 +578,18 @@ private fun SettingsTab(
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             FilterChip(selected = compactMode, onClick = { onCompactModeChange(true) }, label = { Text("紧凑") })
             FilterChip(selected = !compactMode, onClick = { onCompactModeChange(false) }, label = { Text("舒适") })
+        }
+
+        Text("版本模块", style = MaterialTheme.typography.titleLarge)
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            items(versions) { version ->
+                val installed = version !in disabledVersions
+                FilterChip(
+                    selected = installed,
+                    onClick = { onToggleVersionInstalled(version) },
+                    label = { Text(if (installed) "$version 已安装" else "$version 已卸载") }
+                )
+            }
         }
 
         Text("数据管理", style = MaterialTheme.typography.titleLarge)
