@@ -30,7 +30,7 @@ import androidx.compose.material.icons.rounded.FileUpload
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.LockOpen
 import androidx.compose.material.icons.rounded.Restore
-import androidx.compose.material.icons.rounded.Sort
+import androidx.compose.material.icons.rounded.SwapVert
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -99,6 +99,7 @@ fun TrackerApp(vm: TrackerViewModel = viewModel()) {
         .toList()
     var tab by remember { mutableStateOf(HomeTab.LIST) }
     var showFilterSheet by remember { mutableStateOf(false) }
+    var showSortSheet by remember { mutableStateOf(false) }
     val snackbar = remember { SnackbarHostState() }
 
     val createExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) {
@@ -176,6 +177,27 @@ fun TrackerApp(vm: TrackerViewModel = viewModel()) {
             }
         }
 
+        if (showSortSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showSortSheet = false },
+                containerColor = MaterialTheme.colorScheme.surface
+            ) {
+                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("排序方式", style = MaterialTheme.typography.titleMedium)
+                    SortMode.entries.forEach { mode ->
+                        FilterChip(
+                            selected = ui.sortMode == mode,
+                            onClick = {
+                                vm.setSortMode(mode)
+                                showSortSheet = false
+                            },
+                            label = { Text(mode.label) }
+                        )
+                    }
+                }
+            }
+        }
+
         Scaffold(
             containerColor = MaterialTheme.colorScheme.background,
             topBar = {
@@ -223,6 +245,7 @@ fun TrackerApp(vm: TrackerViewModel = viewModel()) {
                     allItems = allItems,
                     filtered = sortedFiltered,
                     onOpenFilter = { showFilterSheet = true },
+                    onOpenSort = { showSortSheet = true },
                     vm = vm,
                 )
                 HomeTab.STATS -> StatsTab(padding, allItems.filter { it.version !in ui.disabledVersions })
@@ -251,6 +274,7 @@ private fun ListTab(
     allItems: List<AchievementItem>,
     filtered: List<AchievementItem>,
     onOpenFilter: () -> Unit,
+    onOpenSort: () -> Unit,
     vm: TrackerViewModel,
 ) {
     val done = allItems.count { it.progress }
@@ -304,27 +328,19 @@ private fun ListTab(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                 FilterChip(selected = ui.onlyTodo, onClick = { vm.setOnlyTodo(!ui.onlyTodo) }, label = { Text("仅未完成") })
                 FilterChip(
                     selected = ui.selectedVersions.isNotEmpty() || ui.selectedCategories.isNotEmpty(),
                     onClick = onOpenFilter,
-                    label = { Text("筛选") },
-                    leadingIcon = { Icon(Icons.Rounded.FilterList, contentDescription = null) }
+                    label = { },
+                    leadingIcon = { Icon(Icons.Rounded.FilterList, contentDescription = "筛选") }
                 )
                 FilterChip(
                     selected = ui.sortMode != SortMode.VERSION_DESC,
-                    onClick = {
-                        val next = when (ui.sortMode) {
-                            SortMode.VERSION_DESC -> SortMode.VERSION_ASC
-                            SortMode.VERSION_ASC -> SortMode.STATUS
-                            SortMode.STATUS -> SortMode.NAME
-                            SortMode.NAME -> SortMode.VERSION_DESC
-                        }
-                        vm.setSortMode(next)
-                    },
-                    label = { Text(ui.sortMode.label) },
-                    leadingIcon = { Icon(Icons.Rounded.Sort, contentDescription = null) }
+                    onClick = onOpenSort,
+                    label = { },
+                    leadingIcon = { Icon(Icons.Rounded.SwapVert, contentDescription = "排序") }
                 )
                 FilterChip(
                     selected = ui.lockProgressEditing,

@@ -19,8 +19,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 enum class SortMode(val label: String) {
-    VERSION_DESC("版本新→旧"),
-    VERSION_ASC("版本旧→新"),
+    VERSION_DESC("版本：新 → 旧"),
+    VERSION_ASC("版本：旧 → 新"),
     STATUS("完成状态"),
     NAME("名称")
 }
