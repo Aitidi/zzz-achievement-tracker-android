@@ -51,6 +51,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -71,6 +72,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.style.TextOverflow
@@ -92,6 +94,16 @@ private object UiTokens {
 
     val ActionButtonCorner = RoundedCornerShape(14.dp)
     val ActionButtonHeight = 48.dp
+}
+
+private object ProtoPalette {
+    val Purple = Color(0xFF896CFE)
+    val PurpleSoft = Color(0xFFB3A0FF)
+    val Accent = Color(0xFFE2F163)
+    val Muted = Color(0xFFA6A6A6)
+    val Border = Color(0xFF3A3A3A)
+    val SurfaceHi = Color(0xFF2A2A2A)
+    val SurfaceLo = Color(0xFF262626)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -210,9 +222,22 @@ fun TrackerApp(vm: TrackerViewModel = viewModel()) {
         }
 
         Scaffold(
-            containerColor = MaterialTheme.colorScheme.background,
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    brush = Brush.radialGradient(
+                        colors = listOf(Color(0xFF3E2A7C), MaterialTheme.colorScheme.background),
+                        center = Offset(860f, -220f),
+                        radius = 1400f
+                    )
+                ),
+            containerColor = Color.Transparent,
             topBar = {
                 TopAppBar(
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.Transparent,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface
+                    ),
                     title = {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text("绝区零成就")
@@ -221,13 +246,14 @@ fun TrackerApp(vm: TrackerViewModel = viewModel()) {
                                 Box(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(999.dp))
-                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                                        .background(ProtoPalette.Purple.copy(alpha = 0.22f))
+                                        .border(1.dp, ProtoPalette.PurpleSoft.copy(alpha = 0.5f), RoundedCornerShape(999.dp))
                                         .padding(horizontal = 8.dp, vertical = 2.dp)
                                 ) {
                                     Text(
                                         text = latestVersion,
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.primary
+                                        color = ProtoPalette.PurpleSoft
                                     )
                                 }
                             }
@@ -237,7 +263,7 @@ fun TrackerApp(vm: TrackerViewModel = viewModel()) {
             },
             snackbarHost = { SnackbarHost(snackbar) },
             bottomBar = {
-                NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
+                NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceVariant) {
                     HomeTab.entries.forEach {
                         NavigationBarItem(
                             selected = tab == it,
@@ -395,7 +421,7 @@ private fun ListTab(
                         "暂无成就数据或已全部隐藏"
                     },
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color(0xCC8E8E93)
+                    color = ProtoPalette.Muted
                 )
             }
         } else {
@@ -430,8 +456,8 @@ private fun IconRectButton(
     content: @Composable () -> Unit
 ) {
     val shape = UiTokens.ControlCorner
-    val bg = if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
-    val border = if (selected) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outline
+    val bg = if (selected) Color(0xFF2F3140) else MaterialTheme.colorScheme.surface
+    val border = if (selected) ProtoPalette.PurpleSoft else ProtoPalette.Border
 
     Box(
         modifier = Modifier
@@ -452,16 +478,23 @@ private fun SummaryCard(done: Int, total: Int) {
     val progress = if (total == 0) 0f else done.toFloat() / total.toFloat()
     Card(
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, ProtoPalette.Border, RoundedCornerShape(18.dp))
     ) {
-        Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text("总进度", style = MaterialTheme.typography.labelMedium)
+        Column(
+            modifier = Modifier
+                .background(brush = Brush.linearGradient(listOf(ProtoPalette.SurfaceHi, ProtoPalette.SurfaceLo)))
+                .padding(10.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text("总进度", style = MaterialTheme.typography.labelMedium, color = ProtoPalette.Muted)
             Text("$done / $total", style = MaterialTheme.typography.titleLarge)
-            Text("剩余 ${total - done} · ${"%.1f".format(progress * 100)}%", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-            Box(modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(999.dp)).background(Color(0x14000000))) {
-                Box(modifier = Modifier.fillMaxWidth(progress).fillMaxHeight().background(MaterialTheme.colorScheme.primary))
+            Text("剩余 ${total - done} · ${"%.1f".format(progress * 100)}%", style = MaterialTheme.typography.labelMedium, color = ProtoPalette.Accent)
+            Box(modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(999.dp)).background(ProtoPalette.Border)) {
+                Box(modifier = Modifier.fillMaxWidth(progress).fillMaxHeight().background(ProtoPalette.Accent))
             }
         }
     }
@@ -479,9 +512,11 @@ private fun AchievementRow(
 
     Card(
         shape = RoundedCornerShape(if (compact) 10.dp else 16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         elevation = CardDefaults.cardElevation(defaultElevation = if (compact) 0.5.dp else 1.dp),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, ProtoPalette.Border, RoundedCornerShape(if (compact) 10.dp else 16.dp))
     ) {
         Row(modifier = Modifier.fillMaxWidth().padding(horizontal = hPad, vertical = vPad), verticalAlignment = Alignment.CenterVertically) {
             Checkbox(
@@ -497,14 +532,14 @@ private fun AchievementRow(
                         overflow = TextOverflow.Ellipsis,
                         style = if (compact) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge
                     )
-                    Text(if (item.progress) "●" else "○", color = if (item.progress) MaterialTheme.colorScheme.secondary else Color(0x668E8E93))
+                    Text(if (item.progress) "●" else "○", color = if (item.progress) ProtoPalette.Accent else ProtoPalette.Muted.copy(alpha = 0.66f))
                 }
                 Text(
                     item.description,
                     maxLines = if (compact) 1 else 2,
                     overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color(0xCC8E8E93)
+                    color = ProtoPalette.Muted
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                     MetaTag(text = item.category)
@@ -520,13 +555,13 @@ private fun MetaTag(text: String) {
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(999.dp))
-            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f))
+            .background(ProtoPalette.Accent)
             .padding(horizontal = 8.dp, vertical = 2.dp)
     ) {
         Text(
             text = text,
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.primary,
+            color = Color(0xFF111111),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
@@ -542,7 +577,7 @@ private fun StatsTab(padding: PaddingValues, allItems: List<AchievementItem>) {
     Column(modifier = Modifier.padding(padding).fillMaxSize().padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         if (allItems.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("暂无可统计的成就数据", color = Color(0xCC8E8E93))
+                Text("暂无可统计的成就数据", color = ProtoPalette.Muted)
             }
         } else {
             Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
@@ -563,8 +598,8 @@ private fun StatsTab(padding: PaddingValues, allItems: List<AchievementItem>) {
                         val p = if (list.isEmpty()) 0f else d.toFloat() / list.size.toFloat()
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text(ver, modifier = Modifier.width(42.dp), style = MaterialTheme.typography.labelMedium)
-                            Box(modifier = Modifier.weight(1f).height(8.dp).clip(RoundedCornerShape(999.dp)).background(Color(0x12000000))) {
-                                Box(modifier = Modifier.fillMaxWidth(p).fillMaxHeight().background(MaterialTheme.colorScheme.primary))
+                            Box(modifier = Modifier.weight(1f).height(8.dp).clip(RoundedCornerShape(999.dp)).background(ProtoPalette.Border)) {
+                                Box(modifier = Modifier.fillMaxWidth(p).fillMaxHeight().background(ProtoPalette.Accent))
                             }
                             Text("${"%.0f".format(p * 100)}%", style = MaterialTheme.typography.labelMedium)
                         }
@@ -580,7 +615,7 @@ private fun RingProgress(percent: Float) {
     Box(contentAlignment = Alignment.Center, modifier = Modifier.size(80.dp)) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             drawArc(
-                color = Color(0x220A84FF),
+                color = ProtoPalette.Border,
                 startAngle = -90f,
                 sweepAngle = 360f,
                 useCenter = false,
@@ -589,7 +624,7 @@ private fun RingProgress(percent: Float) {
                 style = androidx.compose.ui.graphics.drawscope.Stroke(width = 10f, cap = StrokeCap.Round)
             )
             drawArc(
-                color = Color(0xFF0A84FF),
+                color = ProtoPalette.Purple,
                 startAngle = -90f,
                 sweepAngle = 360f * percent,
                 useCenter = false,

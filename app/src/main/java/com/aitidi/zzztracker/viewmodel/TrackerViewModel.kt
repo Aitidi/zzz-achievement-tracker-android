@@ -33,7 +33,7 @@ data class TrackerUiState(
     val disabledVersions: Set<String> = emptySet(),
     val sortMode: SortMode = SortMode.VERSION_DESC,
     val lockProgressEditing: Boolean = false,
-    val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    val themeMode: ThemeMode = ThemeMode.DARK,
     val compactMode: Boolean = true,
 )
 
@@ -123,8 +123,16 @@ class TrackerViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun loadUiState(): TrackerUiState {
-        val theme = runCatching { ThemeMode.valueOf(prefs.getString("themeMode", ThemeMode.SYSTEM.name)!!) }
-            .getOrDefault(ThemeMode.SYSTEM)
+        val migratedThemeV2 = prefs.getBoolean("themeMigratedV2", false)
+        val rawTheme = prefs.getString("themeMode", ThemeMode.DARK.name) ?: ThemeMode.DARK.name
+        val theme = when {
+            !migratedThemeV2 && rawTheme == ThemeMode.SYSTEM.name -> ThemeMode.DARK
+            else -> runCatching { ThemeMode.valueOf(rawTheme) }.getOrDefault(ThemeMode.DARK)
+        }
+        if (!migratedThemeV2) {
+            prefs.edit().putBoolean("themeMigratedV2", true).apply()
+        }
+
         val rawSort = prefs.getString("sortMode", SortMode.VERSION_DESC.name) ?: SortMode.VERSION_DESC.name
         val sort = when (rawSort) {
             "STATUS" -> SortMode.TODO_FIRST // migration from old enum
