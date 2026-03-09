@@ -89,6 +89,9 @@ private object UiTokens {
     val ControlCorner = RoundedCornerShape(10.dp)
     val ControlHeight = 32.dp
     val IconButtonWidth = 40.dp
+
+    val ActionButtonCorner = RoundedCornerShape(14.dp)
+    val ActionButtonHeight = 48.dp
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -638,15 +641,15 @@ private fun SettingsTab(
         }
 
         Text("数据管理", style = MaterialTheme.typography.titleLarge)
-        OutlinedButton(onClick = onExport, modifier = Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(14.dp)) {
+        OutlinedButton(onClick = onExport, modifier = Modifier.fillMaxWidth().height(UiTokens.ActionButtonHeight), shape = UiTokens.ActionButtonCorner) {
             Icon(Icons.Rounded.FileUpload, contentDescription = null)
             Text("  导出进度 JSON")
         }
-        OutlinedButton(onClick = onImport, modifier = Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(14.dp)) {
+        OutlinedButton(onClick = onImport, modifier = Modifier.fillMaxWidth().height(UiTokens.ActionButtonHeight), shape = UiTokens.ActionButtonCorner) {
             Icon(Icons.Rounded.FileDownload, contentDescription = null)
             Text("  导入进度 JSON")
         }
-        OutlinedButton(onClick = onReset, modifier = Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(14.dp)) {
+        OutlinedButton(onClick = onReset, modifier = Modifier.fillMaxWidth().height(UiTokens.ActionButtonHeight), shape = UiTokens.ActionButtonCorner) {
             Icon(Icons.Rounded.Restore, contentDescription = null)
             Text("  重置全部进度")
         }
