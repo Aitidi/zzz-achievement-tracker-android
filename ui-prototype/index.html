@@ -61,6 +61,8 @@
     .modal { width: 390px; background: #242424; border-radius: 18px 18px 0 0; border: 1px solid #3a3a3a; padding: 14px; }
     .opt { width: 100%; text-align:left; margin-top: 8px; height: 38px; border-radius: 10px; border: 1px solid var(--border); background: #2a2a2a; color: var(--text); cursor:pointer; }
     .opt.active { border-color: var(--primary); background: #32295a; }
+    .opt-row { display:flex; flex-wrap: wrap; gap:8px; }
+    .opt-row .opt { width: auto; margin-top: 0; padding: 0 12px; }
   </style>
 </head>
 <body>
@@ -126,9 +128,9 @@
     <div class="modal">
       <h3 style="margin:0 0 6px;">筛选</h3>
       <p style="margin:8px 0 4px;color:var(--muted);font-size:13px;">版本</p>
-      <div id="filterVersionOptions"></div>
+      <div id="filterVersionOptions" class="opt-row"></div>
       <p style="margin:12px 0 4px;color:var(--muted);font-size:13px;">分类</p>
-      <div id="filterCategoryOptions"></div>
+      <div id="filterCategoryOptions" class="opt-row"></div>
       <button id="filterClear" class="opt">清除全部筛选</button>
     </div>
   </div>
