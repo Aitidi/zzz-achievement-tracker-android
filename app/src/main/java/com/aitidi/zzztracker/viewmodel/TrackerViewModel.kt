@@ -9,6 +9,8 @@ import com.aitidi.zzztracker.data.db.AppDatabase
 import com.aitidi.zzztracker.data.repo.TrackerRepository
 import com.aitidi.zzztracker.model.AchievementItem
 import com.aitidi.zzztracker.ui.theme.ThemeMode
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -42,6 +44,8 @@ class TrackerViewModel(app: Application) : AndroidViewModel(app) {
     private var resetTapCount = 0
     private val resetConfirmTotal = 5
     private var resetInProgress = false
+    private var resetHintTimerJob: Job? = null
+    private val resetHintTimeoutMs = 3500L
 
     val items = repo.observeItems().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     private val _ui = MutableStateFlow(loadUiState())
@@ -121,9 +125,17 @@ class TrackerViewModel(app: Application) : AndroidViewModel(app) {
         resetTapCount += 1
         if (resetTapCount < resetConfirmTotal) {
             _events.tryEmit("重置确认 ${resetTapCount}/${resetConfirmTotal}，继续点击“重置”")
+            resetHintTimerJob?.cancel()
+            resetHintTimerJob = viewModelScope.launch {
+                delay(resetHintTimeoutMs)
+                if (!resetInProgress && resetTapCount in 1 until resetConfirmTotal) {
+                    resetTapCount = 0
+                }
+            }
             return
         }
 
+        resetHintTimerJob?.cancel()
         resetTapCount = 0
         resetInProgress = true
         _events.tryEmit("重置中…")
