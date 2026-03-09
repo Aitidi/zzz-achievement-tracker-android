@@ -41,12 +41,13 @@ class TrackerViewModel(app: Application) : AndroidViewModel(app) {
 
     private var resetTapCount = 0
     private val resetConfirmTotal = 5
+    private var resetInProgress = false
 
     val items = repo.observeItems().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     private val _ui = MutableStateFlow(loadUiState())
     val ui: StateFlow<TrackerUiState> = _ui.asStateFlow()
 
-    private val _events = MutableSharedFlow<String>()
+    private val _events = MutableSharedFlow<String>(replay = 0, extraBufferCapacity = 16)
     val events = _events.asSharedFlow()
 
     init {
@@ -112,16 +113,25 @@ class TrackerViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun requestResetProgress() {
-        viewModelScope.launch {
-            resetTapCount += 1
-            if (resetTapCount < resetConfirmTotal) {
-                _events.emit("重置确认 ${resetTapCount}/${resetConfirmTotal}，继续点击“重置”")
-                return@launch
-            }
+        if (resetInProgress) {
+            _events.tryEmit("正在重置中，请稍候…")
+            return
+        }
 
-            repo.resetAllProgress()
-            _events.emit("已重置全部进度（${resetConfirmTotal}/${resetConfirmTotal}）")
-            resetTapCount = 0
+        resetTapCount += 1
+        if (resetTapCount < resetConfirmTotal) {
+            _events.tryEmit("重置确认 ${resetTapCount}/${resetConfirmTotal}，继续点击“重置”")
+            return
+        }
+
+        resetTapCount = 0
+        resetInProgress = true
+        _events.tryEmit("重置中…")
+        viewModelScope.launch {
+            runCatching { repo.resetAllProgress() }
+                .onSuccess { _events.tryEmit("已重置全部进度（${resetConfirmTotal}/${resetConfirmTotal}）") }
+                .onFailure { _events.tryEmit("重置失败：${it.message ?: "未知错误"}") }
+            resetInProgress = false
         }
     }
 

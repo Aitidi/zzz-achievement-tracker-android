@@ -80,6 +80,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.flow.collectLatest
 import com.aitidi.zzztracker.model.AchievementItem
 import com.aitidi.zzztracker.ui.theme.ThemeMode
 import com.aitidi.zzztracker.ui.theme.ZzzTrackerTheme
@@ -202,7 +203,12 @@ fun TrackerApp(vm: TrackerViewModel = viewModel()) {
         if (it != null) vm.importProgress(it)
     }
 
-    LaunchedEffect(Unit) { vm.events.collect { snackbar.showSnackbar(it) } }
+    LaunchedEffect(Unit) {
+        vm.events.collectLatest {
+            snackbar.currentSnackbarData?.dismiss()
+            snackbar.showSnackbar(it)
+        }
+    }
 
     val sortedFiltered by remember(allItems, ui) {
         derivedStateOf {
