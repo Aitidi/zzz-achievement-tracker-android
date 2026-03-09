@@ -43,15 +43,29 @@ jobs:
           VERSION_CODE=$(grep -E 'versionCode\s*=\s*[0-9]+' app/build.gradle.kts | sed -E 's/.*=\s*([0-9]+).*/\1/')
           OUT="zzz-achievement-tracker-v${VERSION_NAME}+${VERSION_CODE}-release.apk"
 
-          APK_PATH=$(find app/build/outputs/apk/release -maxdepth 1 -type f -name "*.apk" | head -n 1)
+          APK_PATH=$(find app/build/outputs/apk/release -maxdepth 1 -type f -name "*.apk" ! -name "*unsigned*.apk" | head -n 1)
           if [ -z "$APK_PATH" ]; then
-            echo "No APK produced under app/build/outputs/apk/release"
+            echo "No signed release APK produced under app/build/outputs/apk/release"
             ls -R app/build/outputs/apk || true
             exit 1
           fi
 
           cp "$APK_PATH" "$OUT"
           echo "APK_NAME=$OUT" >> $GITHUB_ENV
+
+      - name: Verify APK signature
+        run: |
+          APKSIGNER="$ANDROID_SDK_ROOT/build-tools/35.0.0/apksigner"
+          if [ ! -x "$APKSIGNER" ]; then
+            APKSIGNER="$ANDROID_HOME/build-tools/35.0.0/apksigner"
+          fi
+
+          if [ ! -x "$APKSIGNER" ]; then
+            echo "apksigner not found"
+            exit 1
+          fi
+
+          "$APKSIGNER" verify --verbose "$APK_NAME"
 
       - uses: actions/upload-artifact@v4
         with:

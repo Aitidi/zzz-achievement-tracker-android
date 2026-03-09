@@ -102,6 +102,27 @@ private object UiTokens {
     val ActionButtonHeight = 32.dp
 }
 
+private fun parseVersionParts(version: String): List<Int> {
+    return version.trim()
+        .removePrefix("v")
+        .removePrefix("V")
+        .split(Regex("[^0-9]+"))
+        .filter { it.isNotBlank() }
+        .map { it.toIntOrNull() ?: 0 }
+}
+
+private fun compareVersionText(a: String, b: String): Int {
+    val pa = parseVersionParts(a)
+    val pb = parseVersionParts(b)
+    val size = maxOf(pa.size, pb.size)
+    for (i in 0 until size) {
+        val va = pa.getOrElse(i) { 0 }
+        val vb = pb.getOrElse(i) { 0 }
+        if (va != vb) return va.compareTo(vb)
+    }
+    return a.compareTo(b, ignoreCase = true)
+}
+
 private data class ProtoColors(
     val purple: Color,
     val purpleSoft: Color,
@@ -181,7 +202,7 @@ private object ProtoPalette {
 fun TrackerApp(vm: TrackerViewModel = viewModel()) {
     val ui by vm.ui.collectAsStateWithLifecycle()
     val allItems by vm.items.collectAsStateWithLifecycle()
-    val versions = allItems.map { it.version }.distinct().sortedDescending()
+    val versions = allItems.map { it.version }.distinct().sortedWith { a, b -> compareVersionText(b, a) }
     val installedVersions = versions.filterNot { it in ui.disabledVersions }
     val categories = allItems
         .asSequence()
@@ -223,8 +244,14 @@ fun TrackerApp(vm: TrackerViewModel = viewModel()) {
             }
 
             when (ui.sortMode) {
-                SortMode.VERSION_DESC -> filtered.sortedWith(compareByDescending<AchievementItem> { it.version }.thenBy { it.name })
-                SortMode.VERSION_ASC -> filtered.sortedWith(compareBy<AchievementItem> { it.version }.thenBy { it.name })
+                SortMode.VERSION_DESC -> filtered.sortedWith { a, b ->
+                    val versionCmp = compareVersionText(b.version, a.version)
+                    if (versionCmp != 0) versionCmp else a.name.compareTo(b.name)
+                }
+                SortMode.VERSION_ASC -> filtered.sortedWith { a, b ->
+                    val versionCmp = compareVersionText(a.version, b.version)
+                    if (versionCmp != 0) versionCmp else a.name.compareTo(b.name)
+                }
             }
         }
     }
@@ -446,7 +473,7 @@ private fun ListTab(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                ui.selectedVersions.toList().sortedDescending().forEach { v ->
+                ui.selectedVersions.toList().sortedWith { a, b -> compareVersionText(b, a) }.forEach { v ->
                     OptionChip(text = "版本:$v", selected = true, onClick = { vm.toggleVersion(v) })
                 }
                 ui.selectedCategories.toList().sorted().forEach { c ->
@@ -718,7 +745,7 @@ private fun StatsTab(
     val grouped = allItems
         .groupBy { it.version }
         .toList()
-        .sortedByDescending { it.first }
+        .sortedWith { a, b -> compareVersionText(b.first, a.first) }
 
     Column(
         modifier = Modifier
