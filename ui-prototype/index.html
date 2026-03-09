@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ZZZ Achievement UI Prototype</title>
+  <style>
+    :root {
+      --bg: #1e1e1e;
+      --card: #232323;
+      --primary: #896cfe;
+      --primary-soft: #b3a0ff;
+      --accent: #e2f163;
+      --text: #f2f2f2;
+      --muted: #a6a6a6;
+      --border: #3a3a3a;
+      --radius-lg: 18px;
+      --radius-md: 12px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: Inter, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: radial-gradient(1200px 800px at 70% -200px, #3e2a7c, var(--bg));
+      color: var(--text);
+      display: flex; justify-content: center; padding: 24px;
+    }
+    .phone { width: 390px; min-height: 844px; background: var(--bg); border-radius: 28px; border: 1px solid #2a2a2a; padding: 18px 14px 88px; position: relative; }
+    .title { font-size: 28px; font-weight: 800; margin: 6px 6px 12px; }
+    .screen { display: none; }
+    .screen.active { display: block; }
+    .summary { background: linear-gradient(135deg, #2a2a2a, #262626); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px; }
+    .summary strong { font-size: 24px; }
+    .progress { height: 8px; border-radius: 999px; background: #333; margin-top: 10px; overflow: hidden; }
+    .bar { width: 38%; height: 100%; background: linear-gradient(90deg, var(--accent), #b4f64e); }
+    .search { margin-top: 12px; display: flex; gap: 8px; }
+    input { flex: 1; background: #262626; border: 1px solid var(--border); color: var(--text); border-radius: 14px; padding: 12px; }
+    .row { margin-top: 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .left { display:flex; gap: 8px; align-items: center; }
+    .chip { height: 32px; border-radius: 10px; border: 1px solid var(--border); padding: 0 12px; background: #262626; color: var(--text); cursor: pointer; }
+    .chip.active { background: #2f3140; border-color: var(--primary-soft); }
+    .icon-btn { width: 40px; height: 32px; border-radius: 10px; border: 1px solid var(--border); background: #262626; color: var(--text); cursor: pointer; }
+    .icon-btn.active { background: #2f3140; border-color: var(--primary-soft); }
+    .list { margin-top: 12px; display: grid; gap: 10px; }
+    .phone.compact .list { gap: 8px; }
+    .item { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 12px; display:flex; justify-content: space-between; align-items: center; }
+    .phone.compact .item { padding: 9px 10px; }
+    .item.done { opacity: .72; }
+    .item.done h4 { text-decoration: line-through; }
+    .item h4 { margin: 0; font-size: 16px; }
+    .item p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+    .right-pack { display:flex; align-items:center; gap:8px; }
+    .badge { font-size: 12px; color: #111; background: var(--accent); border-radius: 999px; padding: 4px 8px; }
+    .done-btn { width: 24px; height: 24px; border-radius: 7px; border:1px solid var(--border); background:#2b2b2b; color: var(--text); cursor:pointer; }
+    .item.done .done-btn { background: #3a315f; border-color: var(--primary-soft); }
+    .done-btn:disabled { opacity: .4; cursor: not-allowed; }
+    .bottom-nav { position: absolute; left: 12px; right: 12px; bottom: 14px; height: 58px; border-radius: 16px; border: 1px solid var(--border); background: #242424; display: grid; grid-template-columns: repeat(3,1fr); overflow: hidden; }
+    .nav-btn { border: 0; background: transparent; color: var(--muted); font-size: 13px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap: 4px; cursor:pointer; }
+    .nav-btn.active { color: var(--text); background: #2b2b2b; }
+    .icon-flat { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.8; }
+    .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.45); display:none; align-items: flex-end; justify-content: center; }
+    .modal { width: 390px; background: #242424; border-radius: 18px 18px 0 0; border: 1px solid #3a3a3a; padding: 14px; }
+    .opt { width: 100%; text-align:left; margin-top: 8px; height: 38px; border-radius: 10px; border: 1px solid var(--border); background: #2a2a2a; color: var(--text); cursor:pointer; }
+    .opt.active { border-color: var(--primary); background: #32295a; }
+    .opt-row { display:flex; flex-wrap: wrap; gap:8px; }
+    .opt-row .opt { width: auto; margin-top: 0; padding: 0 12px; }
+  </style>
+</head>
+<body>
+  <div class="phone">
+    <section id="screen-achievement" class="screen active">
+      <div class="title">成就</div>
+      <div class="summary">
+        <div>总进度 <strong>142/378</strong></div>
+        <div class="progress"><div class="bar"></div></div>
+      </div>
+      <div class="search"><input id="searchInput" placeholder="搜索成就 / 输入关键词" /></div>
+      <div class="row">
+        <div class="left">
+          <button id="todoBtn" class="chip active">仅未完成</button>
+          <button id="filterBtn" class="icon-btn" aria-label="筛选">
+            <svg class="icon-flat" viewBox="0 0 24 24"><path d="M4 6h16"/><path d="M7 12h10"/><path d="M10 18h4"/></svg>
+          </button>
+          <button id="sortBtn" class="icon-btn" aria-label="排序">
+            <svg class="icon-flat" viewBox="0 0 24 24"><path d="M8 6v12"/><path d="M5 9l3-3 3 3"/><path d="M16 18V6"/><path d="M13 15l3 3 3-3"/></svg>
+          </button>
+        </div>
+        <button id="lockBtn" class="icon-btn" aria-label="锁定">
+          <svg id="lockIcon" class="icon-flat" viewBox="0 0 24 24"><path d="M7 10V7a5 5 0 0 1 10 0v3"/><rect x="5" y="10" width="14" height="10" rx="2"/></svg>
+        </button>
+      </div>
+      <div class="list" id="list"></div>
+    </section>
+
+    <section id="screen-stats" class="screen">
+      <div class="title">统计</div>
+      <div class="summary"><div>总完成率 <strong id="statsRate">0%</strong></div><div class="progress"><div id="statsBar" class="bar"></div></div></div>
+      <div id="statsList" class="list"></div>
+    </section>
+
+    <section id="screen-settings" class="screen">
+      <div class="title">设置</div>
+      <div class="list">
+        <div class="item"><div><h4>紧凑模式</h4><p id="compactLabel">已启用</p></div><button id="compactBtn" class="chip active">切换</button></div>
+        <div class="item"><div><h4>导出进度</h4><p>JSON</p></div><button id="exportBtn" class="chip">导出</button></div>
+        <div class="item"><div><h4>导入进度</h4><p>JSON</p></div><button id="importBtn" class="chip">导入</button><input id="importFile" type="file" accept="application/json" style="display:none"></div>
+        <div class="item"><div><h4>重置进度</h4><p>恢复为初始状态</p></div><button id="resetBtn" class="chip">重置</button></div>
+      </div>
+    </section>
+
+    <nav class="bottom-nav">
+      <button class="nav-btn active" data-screen="achievement"><svg class="icon-flat" viewBox="0 0 24 24"><path d="M12 3l2.6 5.3L20 9l-4 3.9.9 5.6L12 16l-4.9 2.5.9-5.6L4 9l5.4-.7z"/></svg><span>成就</span></button>
+      <button class="nav-btn" data-screen="stats"><svg class="icon-flat" viewBox="0 0 24 24"><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-8"/><path d="M22 20V7"/></svg><span>统计</span></button>
+      <button class="nav-btn" data-screen="settings"><svg class="icon-flat" viewBox="0 0 24 24"><path d="M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5h.1a1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span>设置</span></button>
+    </nav>
+  </div>
+
+  <div id="sortModalBg" class="modal-bg">
+    <div class="modal">
+      <h3 style="margin:0 0 6px;">排序方式</h3>
+      <button class="opt active" data-sort="verDesc">版本：新 → 旧</button>
+      <button class="opt" data-sort="verAsc">版本：旧 → 新</button>
+      <button class="opt" data-sort="name">名称</button>
+      <button class="opt" data-sort="todo">未完成优先</button>
+    </div>
+  </div>
+
+  <div id="filterModalBg" class="modal-bg">
+    <div class="modal">
+      <h3 style="margin:0 0 6px;">筛选</h3>
+      <p style="margin:8px 0 4px;color:var(--muted);font-size:13px;">版本</p>
+      <div id="filterVersionOptions" class="opt-row"></div>
+      <p style="margin:12px 0 4px;color:var(--muted);font-size:13px;">分类</p>
+      <div id="filterCategoryOptions" class="opt-row"></div>
+      <button id="filterClear" class="opt">清除全部筛选</button>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'zzz_ui_proto_v1';
+    const seed = [
+      { id:1, title:'今天也要打卡', desc:'每日任务完成 1 次', ver:'2.0', cat:'日常', done:false },
+      { id:2, title:'喧响测试员', desc:'完成一次高危副本', ver:'1.9', cat:'战斗', done:false },
+      { id:3, title:'完美闪避大师', desc:'10 次极限闪避', ver:'2.0', cat:'战斗', done:true },
+      { id:4, title:'预算控制', desc:'累计获取 100000 丁尼', ver:'1.8', cat:'成长', done:false },
+      { id:5, title:'收藏家', desc:'解锁 20 条图鉴', ver:'1.7', cat:'探索', done:true },
+    ];
+
+    let state = loadState() || {
+      data: seed,
+      onlyTodo: true,
+      search: '',
+      sortMode: 'verDesc',
+      selectedVersions: [],
+      selectedCategories: [],
+      locked: false,
+      compact: true
+    };
+    state.selectedCategories = state.selectedCategories || [];
+
+    const list = document.getElementById('list');
+    const sortBtn = document.getElementById('sortBtn');
+    const filterBtn = document.getElementById('filterBtn');
+    const lockBtn = document.getElementById('lockBtn');
+    const todoBtn = document.getElementById('todoBtn');
+    const searchInput = document.getElementById('searchInput');
+    const sortBg = document.getElementById('sortModalBg');
+    const filterBg = document.getElementById('filterModalBg');
+
+    function loadState() {
+      try { return JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch { return null; }
+    }
+    function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+
+    function getFilteredSorted() {
+      let arr = [...state.data];
+      if (state.onlyTodo) arr = arr.filter(x => !x.done);
+      if (state.search.trim()) {
+        const q = state.search.trim().toLowerCase();
+        arr = arr.filter(x => x.title.toLowerCase().includes(q) || x.desc.toLowerCase().includes(q));
+      }
+      if (state.selectedVersions.length) arr = arr.filter(x => state.selectedVersions.includes(x.ver));
+      if (state.selectedCategories.length) arr = arr.filter(x => state.selectedCategories.includes(x.cat));
+      if (state.sortMode === 'verDesc') arr.sort((a,b) => Number(b.ver)-Number(a.ver));
+      if (state.sortMode === 'verAsc') arr.sort((a,b) => Number(a.ver)-Number(b.ver));
+      if (state.sortMode === 'name') arr.sort((a,b) => a.title.localeCompare(b.title,'zh-CN'));
+      if (state.sortMode === 'todo') arr.sort((a,b) => Number(a.done)-Number(b.done));
+      return arr;
+    }
+
+    function renderList() {
+      const arr = getFilteredSorted();
+      list.innerHTML = arr.length ? '' : '<div class="item"><div><h4>暂无结果</h4><p>试试清空筛选或搜索关键词</p></div></div>';
+      arr.forEach((it) => {
+        const el = document.createElement('div');
+        el.className = `item ${it.done ? 'done' : ''}`;
+        el.innerHTML = `
+          <div><h4>${it.title}</h4><p>${it.desc}</p></div>
+          <div class="right-pack">
+            <span class="badge">${it.cat}</span>
+            <span class="badge">v${it.ver}</span>
+            <button class="done-btn" data-id="${it.id}" title="标记完成" ${state.locked ? 'disabled' : ''}>${it.done ? '✓' : ''}</button>
+          </div>`;
+        list.appendChild(el);
+      });
+    }
+
+    function renderStats() {
+      const total = state.data.length;
+      const done = state.data.filter(x => x.done).length;
+      const rate = total ? Math.round(done*100/total) : 0;
+      document.getElementById('statsRate').textContent = `${rate}%`;
+      document.getElementById('statsBar').style.width = `${rate}%`;
+
+      const byVer = Object.fromEntries([...new Set(state.data.map(x=>x.ver))].map(v => [v, state.data.filter(x=>x.ver===v)]));
+      const stats = Object.entries(byVer).map(([v,arr]) => {
+        const d = arr.filter(x=>x.done).length;
+        return `<div class="item"><div><h4>${v} 版本</h4><p>完成 ${d} / ${arr.length}</p></div><span class="badge">${Math.round(d*100/arr.length)}%</span></div>`;
+      }).join('');
+      document.getElementById('statsList').innerHTML = stats;
+    }
+
+    function renderFilters() {
+      const versions = [...new Set(state.data.map(x=>x.ver))].sort((a,b)=>Number(b)-Number(a));
+      const categories = [...new Set(state.data.map(x=>x.cat))];
+      const vBox = document.getElementById('filterVersionOptions');
+      const cBox = document.getElementById('filterCategoryOptions');
+      vBox.innerHTML = versions.map(v => `<button class="opt ${state.selectedVersions.includes(v)?'active':''}" data-ver="${v}">版本 ${v}</button>`).join('');
+      cBox.innerHTML = categories.map(c => `<button class="opt ${state.selectedCategories.includes(c)?'active':''}" data-cat="${c}">${c}</button>`).join('');
+      filterBtn.classList.toggle('active', state.selectedVersions.length>0 || state.selectedCategories.length>0);
+    }
+
+    function renderAll() {
+      todoBtn.classList.toggle('active', state.onlyTodo);
+      searchInput.value = state.search;
+      document.querySelector('.phone').classList.toggle('compact', state.compact);
+      document.getElementById('compactLabel').textContent = state.compact ? '已启用' : '已关闭';
+      document.getElementById('compactBtn').classList.toggle('active', state.compact);
+      lockBtn.classList.toggle('active', state.locked);
+      document.getElementById('lockIcon').innerHTML = state.locked
+        ? '<path d="M7 10V7a5 5 0 0 1 10 0v3"/><rect x="5" y="10" width="14" height="10" rx="2"/>'
+        : '<path d="M7 10V7a5 5 0 0 1 9.5-2"/><path d="M12 13v3"/><rect x="5" y="10" width="14" height="10" rx="2"/>';
+      document.querySelectorAll('.opt[data-sort]').forEach(o => o.classList.toggle('active', o.dataset.sort===state.sortMode));
+      sortBtn.classList.toggle('active', state.sortMode!=='verDesc');
+      renderFilters();
+      renderList();
+      renderStats();
+      saveState();
+    }
+
+    sortBtn.onclick = () => sortBg.style.display = 'flex';
+    filterBtn.onclick = () => filterBg.style.display = 'flex';
+    lockBtn.onclick = () => { state.locked = !state.locked; renderAll(); };
+    todoBtn.onclick = () => { state.onlyTodo = !state.onlyTodo; renderAll(); };
+    searchInput.oninput = (e) => { state.search = e.target.value; renderAll(); };
+
+    sortBg.onclick = (e) => { if (e.target === sortBg) sortBg.style.display = 'none'; };
+    filterBg.onclick = (e) => { if (e.target === filterBg) filterBg.style.display = 'none'; };
+
+    document.querySelectorAll('.opt[data-sort]').forEach(btn => {
+      btn.onclick = () => { state.sortMode = btn.dataset.sort; sortBg.style.display = 'none'; renderAll(); };
+    });
+
+    document.getElementById('filterVersionOptions').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-ver]'); if (!btn) return;
+      const v = btn.dataset.ver;
+      state.selectedVersions = state.selectedVersions.includes(v)
+        ? state.selectedVersions.filter(x => x!==v)
+        : [...state.selectedVersions, v];
+      renderAll();
+    });
+    document.getElementById('filterCategoryOptions').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-cat]'); if (!btn) return;
+      const c = btn.dataset.cat;
+      state.selectedCategories = state.selectedCategories.includes(c)
+        ? state.selectedCategories.filter(x => x!==c)
+        : [...state.selectedCategories, c];
+      renderAll();
+    });
+    document.getElementById('filterClear').onclick = () => { state.selectedVersions = []; state.selectedCategories = []; renderAll(); };
+
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+      btn.onclick = () => {
+        document.querySelectorAll('.nav-btn').forEach(n => n.classList.remove('active'));
+        btn.classList.add('active');
+        const key = btn.dataset.screen;
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(`screen-${key}`).classList.add('active');
+      };
+    });
+
+    list.addEventListener('click', (e) => {
+      const btn = e.target.closest('.done-btn'); if (!btn || state.locked) return;
+      const id = Number(btn.dataset.id);
+      const item = state.data.find(x => x.id===id);
+      if (item) item.done = !item.done;
+      renderAll();
+    });
+
+    document.getElementById('compactBtn').onclick = () => { state.compact = !state.compact; renderAll(); };
+    document.getElementById('exportBtn').onclick = () => {
+      const blob = new Blob([JSON.stringify(state.data, null, 2)], {type:'application/json'});
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'zzz-progress.json'; a.click();
+      URL.revokeObjectURL(a.href);
+    };
+    document.getElementById('importBtn').onclick = () => document.getElementById('importFile').click();
+    document.getElementById('importFile').onchange = async (e) => {
+      const file = e.target.files[0]; if (!file) return;
+      try {
+        const arr = JSON.parse(await file.text());
+        if (Array.isArray(arr)) state.data = state.data.map(x => ({...x, done: !!arr.find(y => y.id===x.id)?.done}));
+        renderAll();
+      } catch { alert('导入失败：JSON 格式不正确'); }
+    };
+    document.getElementById('resetBtn').onclick = () => { if (confirm('确认重置进度？')) { state.data = seed.map(x=>({...x})); renderAll(); } };
+
+    renderAll();
+  </script>
+</body>
+</html>

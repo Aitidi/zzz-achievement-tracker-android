@@ -21,7 +21,7 @@ import kotlinx.coroutines.launch
 enum class SortMode(val label: String) {
     VERSION_DESC("版本：新 → 旧"),
     VERSION_ASC("版本：旧 → 新"),
-    STATUS("完成状态"),
+    TODO_FIRST("未完成优先"),
     NAME("名称")
 }
 
@@ -125,8 +125,11 @@ class TrackerViewModel(app: Application) : AndroidViewModel(app) {
     private fun loadUiState(): TrackerUiState {
         val theme = runCatching { ThemeMode.valueOf(prefs.getString("themeMode", ThemeMode.SYSTEM.name)!!) }
             .getOrDefault(ThemeMode.SYSTEM)
-        val sort = runCatching { SortMode.valueOf(prefs.getString("sortMode", SortMode.VERSION_DESC.name)!!) }
-            .getOrDefault(SortMode.VERSION_DESC)
+        val rawSort = prefs.getString("sortMode", SortMode.VERSION_DESC.name) ?: SortMode.VERSION_DESC.name
+        val sort = when (rawSort) {
+            "STATUS" -> SortMode.TODO_FIRST // migration from old enum
+            else -> runCatching { SortMode.valueOf(rawSort) }.getOrDefault(SortMode.VERSION_DESC)
+        }
         return TrackerUiState(
             onlyTodo = prefs.getBoolean("onlyTodo", true),
             query = prefs.getString("query", "") ?: "",

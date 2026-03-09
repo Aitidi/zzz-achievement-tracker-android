@@ -137,7 +137,7 @@ fun TrackerApp(vm: TrackerViewModel = viewModel()) {
             when (ui.sortMode) {
                 SortMode.VERSION_DESC -> filtered.sortedWith(compareByDescending<AchievementItem> { it.version }.thenBy { it.name })
                 SortMode.VERSION_ASC -> filtered.sortedWith(compareBy<AchievementItem> { it.version }.thenBy { it.name })
-                SortMode.STATUS -> filtered.sortedWith(compareBy<AchievementItem> { it.progress }.thenByDescending { it.version }.thenBy { it.name })
+                SortMode.TODO_FIRST -> filtered.sortedWith(compareBy<AchievementItem> { it.progress }.thenByDescending { it.version }.thenBy { it.name })
                 SortMode.NAME -> filtered.sortedBy { it.name }
             }
         }
