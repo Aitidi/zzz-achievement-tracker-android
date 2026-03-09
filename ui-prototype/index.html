@@ -24,7 +24,7 @@
       color: var(--text);
       display: flex; justify-content: center; padding: 24px;
     }
-    .phone { width: 390px; min-height: 844px; background: var(--bg); border-radius: 28px; border: 1px solid #2a2a2a; padding: 18px 14px; }
+    .phone { width: 390px; min-height: 844px; background: var(--bg); border-radius: 28px; border: 1px solid #2a2a2a; padding: 18px 14px 88px; position: relative; }
     .title { font-size: 28px; font-weight: 800; margin: 6px 6px 12px; }
     .summary { background: linear-gradient(135deg, #2a2a2a, #262626); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px; }
     .summary strong { font-size: 24px; }
@@ -43,6 +43,10 @@
     .item h4 { margin: 0; font-size: 16px; }
     .item p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
     .badge { font-size: 12px; color: #111; background: var(--accent); border-radius: 999px; padding: 4px 8px; }
+    .bottom-nav { position: absolute; left: 12px; right: 12px; bottom: 14px; height: 58px; border-radius: 16px; border: 1px solid var(--border); background: #242424; display: grid; grid-template-columns: repeat(3,1fr); overflow: hidden; }
+    .nav-btn { border: 0; background: transparent; color: var(--muted); font-size: 13px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap: 4px; cursor:pointer; }
+    .nav-btn.active { color: var(--text); background: #2b2b2b; }
+    .icon-flat { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.8; }
     .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.45); display:none; align-items: flex-end; justify-content: center; }
     .modal { width: 390px; background: #242424; border-radius: 18px 18px 0 0; border: 1px solid #3a3a3a; padding: 14px; }
     .opt { width: 100%; text-align:left; margin-top: 8px; height: 38px; border-radius: 10px; border: 1px solid var(--border); background: #2a2a2a; color: var(--text); cursor:pointer; }
@@ -63,9 +67,17 @@
         <button id="filterBtn" class="icon-btn">⚲</button>
         <button id="sortBtn" class="icon-btn">↕</button>
       </div>
-      <button id="lockBtn" class="icon-btn">🔓</button>
+      <button id="lockBtn" class="icon-btn" aria-label="锁定">
+        <svg id="lockIcon" class="icon-flat" viewBox="0 0 24 24"><path d="M7 10V7a5 5 0 0 1 10 0v3"/><rect x="5" y="10" width="14" height="10" rx="2"/></svg>
+      </button>
     </div>
     <div class="list" id="list"></div>
+
+    <nav class="bottom-nav">
+      <button class="nav-btn active"><span>🏆</span><span>成就</span></button>
+      <button class="nav-btn"><span>📊</span><span>统计</span></button>
+      <button class="nav-btn"><span>⚙️</span><span>设置</span></button>
+    </nav>
   </div>
 
   <div id="sortModalBg" class="modal-bg">
@@ -105,7 +117,9 @@
     filterBtn.onclick = () => filterBtn.classList.toggle('active');
     lockBtn.onclick = () => {
       lockBtn.classList.toggle('active');
-      lockBtn.textContent = lockBtn.classList.contains('active') ? '🔒' : '🔓';
+      document.getElementById('lockIcon').innerHTML = lockBtn.classList.contains('active')
+        ? '<path d="M7 10V7a5 5 0 0 1 10 0v3"/><rect x="5" y="10" width="14" height="10" rx="2"/>'
+        : '<path d="M7 10V7a5 5 0 0 1 9.5-2"/><path d="M12 13v3"/><rect x="5" y="10" width="14" height="10" rx="2"/>';
     };
     todoBtn.onclick = () => todoBtn.classList.toggle('active');
     bg.onclick = (e) => {
