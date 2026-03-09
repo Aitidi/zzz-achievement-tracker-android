@@ -39,6 +39,9 @@ class TrackerViewModel(app: Application) : AndroidViewModel(app) {
     private val repo = TrackerRepository(app, AppDatabase.get(app).achievementDao())
     private val prefs = app.getSharedPreferences("tracker_prefs", Context.MODE_PRIVATE)
 
+    private var resetTapCount = 0
+    private val resetConfirmTotal = 5
+
     val items = repo.observeItems().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     private val _ui = MutableStateFlow(loadUiState())
     val ui: StateFlow<TrackerUiState> = _ui.asStateFlow()
@@ -108,10 +111,17 @@ class TrackerViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun resetProgress() {
+    fun requestResetProgress() {
         viewModelScope.launch {
+            resetTapCount += 1
+            if (resetTapCount < resetConfirmTotal) {
+                _events.emit("重置确认 ${resetTapCount}/${resetConfirmTotal}，继续点击“重置”")
+                return@launch
+            }
+
             repo.resetAllProgress()
-            _events.emit("已重置全部进度")
+            _events.emit("已重置全部进度（${resetConfirmTotal}/${resetConfirmTotal}）")
+            resetTapCount = 0
         }
     }
 

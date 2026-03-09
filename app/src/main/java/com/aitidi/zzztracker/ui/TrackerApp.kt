@@ -318,16 +318,14 @@ fun TrackerApp(vm: TrackerViewModel = viewModel()) {
 
                 HomeTab.SETTINGS -> SettingsTab(
                     padding = padding,
-                    themeMode = ui.themeMode,
                     compactMode = ui.compactMode,
                     versions = versions,
                     disabledVersions = ui.disabledVersions,
                     onToggleVersionInstalled = vm::toggleVersionInstalled,
-                    onThemeModeChange = vm::setThemeMode,
                     onCompactModeChange = vm::setCompactMode,
                     onExport = { createExportLauncher.launch("zzz_progress_backup.json") },
                     onImport = { importLauncher.launch(arrayOf("application/json")) },
-                    onReset = vm::resetProgress,
+                    onReset = vm::requestResetProgress,
                 )
             }
         }
@@ -792,12 +790,10 @@ private fun StatsTab(
 @Composable
 private fun SettingsTab(
     padding: PaddingValues,
-    themeMode: ThemeMode,
     compactMode: Boolean,
     versions: List<String>,
     disabledVersions: Set<String>,
     onToggleVersionInstalled: (String) -> Unit,
-    onThemeModeChange: (ThemeMode) -> Unit,
     onCompactModeChange: (Boolean) -> Unit,
     onExport: () -> Unit,
     onImport: () -> Unit,
@@ -843,13 +839,6 @@ private fun SettingsTab(
             actionSelected = false,
             onActionClick = onReset
         )
-
-        Text("主题", color = ProtoPalette.Muted, style = MaterialTheme.typography.labelMedium)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            OptionChip("跟随系统", themeMode == ThemeMode.SYSTEM) { onThemeModeChange(ThemeMode.SYSTEM) }
-            OptionChip("浅色", themeMode == ThemeMode.LIGHT) { onThemeModeChange(ThemeMode.LIGHT) }
-            OptionChip("深色", themeMode == ThemeMode.DARK) { onThemeModeChange(ThemeMode.DARK) }
-        }
 
         Text("版本模块", color = ProtoPalette.Muted, style = MaterialTheme.typography.labelMedium)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
