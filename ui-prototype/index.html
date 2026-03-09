@@ -26,6 +26,8 @@
     }
     .phone { width: 390px; min-height: 844px; background: var(--bg); border-radius: 28px; border: 1px solid #2a2a2a; padding: 18px 14px 88px; position: relative; }
     .title { font-size: 28px; font-weight: 800; margin: 6px 6px 12px; }
+    .screen { display: none; }
+    .screen.active { display: block; }
     .summary { background: linear-gradient(135deg, #2a2a2a, #262626); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px; }
     .summary strong { font-size: 24px; }
     .progress { height: 8px; border-radius: 999px; background: #333; margin-top: 10px; overflow: hidden; }
@@ -55,28 +57,52 @@
 </head>
 <body>
   <div class="phone">
-    <div class="title">成就</div>
-    <div class="summary">
-      <div>总进度 <strong>142/378</strong></div>
-      <div class="progress"><div class="bar"></div></div>
-    </div>
-    <div class="search"><input placeholder="搜索成就 / 输入关键词" /></div>
-    <div class="row">
-      <div class="left">
-        <button id="todoBtn" class="chip active">仅未完成</button>
-        <button id="filterBtn" class="icon-btn">⚲</button>
-        <button id="sortBtn" class="icon-btn">↕</button>
+    <section id="screen-achievement" class="screen active">
+      <div class="title">成就</div>
+      <div class="summary">
+        <div>总进度 <strong>142/378</strong></div>
+        <div class="progress"><div class="bar"></div></div>
       </div>
-      <button id="lockBtn" class="icon-btn" aria-label="锁定">
-        <svg id="lockIcon" class="icon-flat" viewBox="0 0 24 24"><path d="M7 10V7a5 5 0 0 1 10 0v3"/><rect x="5" y="10" width="14" height="10" rx="2"/></svg>
-      </button>
-    </div>
-    <div class="list" id="list"></div>
+      <div class="search"><input placeholder="搜索成就 / 输入关键词" /></div>
+      <div class="row">
+        <div class="left">
+          <button id="todoBtn" class="chip active">仅未完成</button>
+          <button id="filterBtn" class="icon-btn" aria-label="筛选">
+            <svg class="icon-flat" viewBox="0 0 24 24"><path d="M4 6h16"/><path d="M7 12h10"/><path d="M10 18h4"/></svg>
+          </button>
+          <button id="sortBtn" class="icon-btn" aria-label="排序">
+            <svg class="icon-flat" viewBox="0 0 24 24"><path d="M8 6v12"/><path d="M5 9l3-3 3 3"/><path d="M16 18V6"/><path d="M13 15l3 3 3-3"/></svg>
+          </button>
+        </div>
+        <button id="lockBtn" class="icon-btn" aria-label="锁定">
+          <svg id="lockIcon" class="icon-flat" viewBox="0 0 24 24"><path d="M7 10V7a5 5 0 0 1 10 0v3"/><rect x="5" y="10" width="14" height="10" rx="2"/></svg>
+        </button>
+      </div>
+      <div class="list" id="list"></div>
+    </section>
+
+    <section id="screen-stats" class="screen">
+      <div class="title">统计</div>
+      <div class="summary"><div>总完成率 <strong>37.6%</strong></div><div class="progress"><div class="bar"></div></div></div>
+      <div class="list">
+        <div class="item"><div><h4>2.0 版本</h4><p>完成 31 / 82</p></div><span class="badge">37%</span></div>
+        <div class="item"><div><h4>战斗类</h4><p>完成 48 / 130</p></div><span class="badge">36%</span></div>
+      </div>
+    </section>
+
+    <section id="screen-settings" class="screen">
+      <div class="title">设置</div>
+      <div class="list">
+        <div class="item"><div><h4>主题模式</h4><p>深色</p></div></div>
+        <div class="item"><div><h4>紧凑模式</h4><p>已启用</p></div></div>
+        <div class="item"><div><h4>导出进度</h4><p>JSON</p></div></div>
+      </div>
+    </section>
 
     <nav class="bottom-nav">
-      <button class="nav-btn active"><span>🏆</span><span>成就</span></button>
-      <button class="nav-btn"><span>📊</span><span>统计</span></button>
-      <button class="nav-btn"><span>⚙️</span><span>设置</span></button>
+      <button class="nav-btn active" data-screen="achievement"><svg class="icon-flat" viewBox="0 0 24 24"><path d="M12 3l2.6 5.3L20 9l-4 3.9.9 5.6L12 16l-4.9 2.5.9-5.6L4 9l5.4-.7z"/></svg><span>成就</span></button>
+      <button class="nav-btn" data-screen="stats"><svg class="icon-flat" viewBox="0 0 24 24"><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-8"/><path d="M22 20V7"/></svg><span>统计</span></button>
+      <button class="nav-btn" data-screen="settings"><svg class="icon-flat" viewBox="0 0 24 24"><path d="M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5h.1a1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span>设置</span></button>
     </nav>
   </div>
 
@@ -132,6 +158,16 @@
         bg.style.display = 'none';
         sortBtn.classList.add('active');
       }
+    });
+
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+      btn.onclick = () => {
+        document.querySelectorAll('.nav-btn').forEach(n => n.classList.remove('active'));
+        btn.classList.add('active');
+        const key = btn.dataset.screen;
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(`screen-${key}`).classList.add('active');
+      };
     });
   </script>
 </body>
