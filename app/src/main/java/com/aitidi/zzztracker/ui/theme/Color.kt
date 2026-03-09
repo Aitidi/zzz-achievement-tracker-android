@@ -2,18 +2,18 @@ package com.aitidi.zzztracker.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// iOS-like accent colors
-val IOSBlue = Color(0xFF0A84FF)
-val IOSGreen = Color(0xFF30D158)
+// Prototype-inspired palette (af9c916)
+val ZzzPurple = Color(0xFF896CFE)
+val ZzzPurpleSoft = Color(0xFFB3A0FF)
+val ZzzAccent = Color(0xFFE2F163)
+val ZzzText = Color(0xFFF2F2F2)
+val ZzzMuted = Color(0xFFA6A6A6)
+val ZzzBorder = Color(0xFF3A3A3A)
 
-// Light (approx iOS system background palette)
-val LightBackground = Color(0xFFF2F2F7)
+val DarkBackground = Color(0xFF1E1E1E)
+val DarkSurface = Color(0xFF232323)
+val DarkCard = Color(0xFF262626)
+
+val LightBackground = Color(0xFFF4F1FF)
 val LightSurface = Color(0xFFFFFFFF)
 val LightCard = Color(0xFFFFFFFF)
-val LightSecondary = Color(0xFF8E8E93)
-
-// Dark (approx iOS dark system palette)
-val DarkBackground = Color(0xFF000000)
-val DarkSurface = Color(0xFF1C1C1E)
-val DarkCard = Color(0xFF2C2C2E)
-val DarkSecondary = Color(0xFF8E8E93)

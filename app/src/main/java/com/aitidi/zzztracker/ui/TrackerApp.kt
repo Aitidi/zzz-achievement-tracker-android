@@ -3,55 +3,57 @@ package com.aitidi.zzztracker.ui
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.Canvas
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.FilterList
+import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.FileDownload
 import androidx.compose.material.icons.rounded.FileUpload
+import androidx.compose.material.icons.rounded.FilterList
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.LockOpen
 import androidx.compose.material.icons.rounded.Restore
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.SwapVert
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -59,42 +61,122 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.flow.collectLatest
 import com.aitidi.zzztracker.model.AchievementItem
 import com.aitidi.zzztracker.ui.theme.ThemeMode
 import com.aitidi.zzztracker.ui.theme.ZzzTrackerTheme
 import com.aitidi.zzztracker.viewmodel.SortMode
+import com.aitidi.zzztracker.viewmodel.TrackerUiState
 import com.aitidi.zzztracker.viewmodel.TrackerViewModel
 
-private enum class HomeTab(val title: String) { LIST("成就"), STATS("统计"), SETTINGS("设置") }
+private enum class HomeTab(val title: String, val icon: ImageVector) {
+    LIST("成就", Icons.Rounded.Star),
+    STATS("统计", Icons.Rounded.BarChart),
+    SETTINGS("设置", Icons.Rounded.Settings)
+}
 
 private object UiTokens {
     val ControlCorner = RoundedCornerShape(10.dp)
     val ControlHeight = 32.dp
     val IconButtonWidth = 40.dp
-
-    val ActionButtonCorner = RoundedCornerShape(14.dp)
-    val ActionButtonHeight = 48.dp
+    val ActionButtonCorner = RoundedCornerShape(10.dp)
+    val ActionButtonHeight = 32.dp
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+private data class ProtoColors(
+    val purple: Color,
+    val purpleSoft: Color,
+    val accent: Color,
+    val text: Color,
+    val muted: Color,
+    val border: Color,
+    val bg: Color,
+    val surface: Color,
+    val surfaceAlt: Color,
+    val surfaceSelected: Color,
+    val glow: Color,
+    val tabSelectedBg: Color,
+    val tabSelectedText: Color,
+    val checkDoneBg: Color,
+    val checkUndoneBg: Color,
+)
+
+private val DarkProto = ProtoColors(
+    purple = Color(0xFF896CFE),
+    purpleSoft = Color(0xFFB3A0FF),
+    accent = Color(0xFFE2F163),
+    text = Color(0xFFF2F2F2),
+    muted = Color(0xFFA6A6A6),
+    border = Color(0xFF3A3A3A),
+    bg = Color(0xFF1E1E1E),
+    surface = Color(0xFF232323),
+    surfaceAlt = Color(0xFF262626),
+    surfaceSelected = Color(0xFF2F3140),
+    glow = Color(0xFF3E2A7C),
+    tabSelectedBg = Color(0xFF2B2B2B),
+    tabSelectedText = Color(0xFFFFFFFF),
+    checkDoneBg = Color(0xFF3A315F),
+    checkUndoneBg = Color(0xFF2B2B2B),
+)
+
+private val LightProto = ProtoColors(
+    purple = Color(0xFF7C5BFF),
+    purpleSoft = Color(0xFF8A71FF),
+    accent = Color(0xFFD2E447),
+    text = Color(0xFF1C1C1E),
+    muted = Color(0xFF5F5F66),
+    border = Color(0xFFDADAE2),
+    bg = Color(0xFFF5F4FB),
+    surface = Color(0xFFFFFFFF),
+    surfaceAlt = Color(0xFFF8F7FC),
+    surfaceSelected = Color(0xFFEAE5FF),
+    glow = Color(0xFFEDE6FF),
+    tabSelectedBg = Color(0xFFEAE5FF),
+    tabSelectedText = Color(0xFF2F225F),
+    checkDoneBg = Color(0xFFDCD4FF),
+    checkUndoneBg = Color(0xFFF0EFF5),
+)
+
+private object ProtoPalette {
+    var current: ProtoColors = DarkProto
+
+    val Purple get() = current.purple
+    val PurpleSoft get() = current.purpleSoft
+    val Accent get() = current.accent
+    val Text get() = current.text
+    val Muted get() = current.muted
+    val Border get() = current.border
+    val Bg get() = current.bg
+    val Surface get() = current.surface
+    val SurfaceAlt get() = current.surfaceAlt
+    val SurfaceSelected get() = current.surfaceSelected
+    val Glow get() = current.glow
+    val TabSelectedBg get() = current.tabSelectedBg
+    val TabSelectedText get() = current.tabSelectedText
+    val CheckDoneBg get() = current.checkDoneBg
+    val CheckUndoneBg get() = current.checkUndoneBg
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun TrackerApp(vm: TrackerViewModel = viewModel()) {
     val ui by vm.ui.collectAsStateWithLifecycle()
@@ -108,6 +190,7 @@ fun TrackerApp(vm: TrackerViewModel = viewModel()) {
         .distinct()
         .sorted()
         .toList()
+
     var tab by remember { mutableStateOf(HomeTab.LIST) }
     var showFilterSheet by remember { mutableStateOf(false) }
     var showSortSheet by remember { mutableStateOf(false) }
@@ -120,7 +203,12 @@ fun TrackerApp(vm: TrackerViewModel = viewModel()) {
         if (it != null) vm.importProgress(it)
     }
 
-    LaunchedEffect(Unit) { vm.events.collect { snackbar.showSnackbar(it) } }
+    LaunchedEffect(Unit) {
+        vm.events.collectLatest {
+            snackbar.currentSnackbarData?.dismiss()
+            snackbar.showSnackbar(it)
+        }
+    }
 
     val sortedFiltered by remember(allItems, ui) {
         derivedStateOf {
@@ -137,51 +225,40 @@ fun TrackerApp(vm: TrackerViewModel = viewModel()) {
             when (ui.sortMode) {
                 SortMode.VERSION_DESC -> filtered.sortedWith(compareByDescending<AchievementItem> { it.version }.thenBy { it.name })
                 SortMode.VERSION_ASC -> filtered.sortedWith(compareBy<AchievementItem> { it.version }.thenBy { it.name })
-                SortMode.TODO_FIRST -> filtered.sortedWith(compareBy<AchievementItem> { it.progress }.thenByDescending { it.version }.thenBy { it.name })
-                SortMode.NAME -> filtered.sortedBy { it.name }
             }
         }
     }
+
+    val useDarkPalette = when (ui.themeMode) {
+        ThemeMode.SYSTEM -> isSystemInDarkTheme()
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+    }
+    ProtoPalette.current = if (useDarkPalette) DarkProto else LightProto
 
     ZzzTrackerTheme(mode = ui.themeMode) {
         if (showFilterSheet) {
             ModalBottomSheet(
                 onDismissRequest = { showFilterSheet = false },
-                containerColor = MaterialTheme.colorScheme.surface
+                containerColor = ProtoPalette.Surface,
+                contentColor = ProtoPalette.Text,
             ) {
-                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("版本（可多选）", style = MaterialTheme.typography.titleMedium)
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        item {
-                            FilterChip(
-                                selected = ui.selectedVersions.isEmpty(),
-                                onClick = vm::clearVersionFilter,
-                                label = { Text("全部") }
-                            )
-                        }
-                        items(installedVersions) { v ->
-                            FilterChip(
-                                selected = v in ui.selectedVersions,
-                                onClick = { vm.toggleVersion(v) },
-                                label = { Text(v) }
-                            )
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("筛选", style = MaterialTheme.typography.titleLarge, color = ProtoPalette.Text)
+
+                    Text("版本", style = MaterialTheme.typography.labelMedium, color = ProtoPalette.Muted)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OptionChip(text = "全部", selected = ui.selectedVersions.isEmpty(), onClick = vm::clearVersionFilter)
+                        installedVersions.forEach { v ->
+                            OptionChip(text = "版本 $v", selected = v in ui.selectedVersions, onClick = { vm.toggleVersion(v) })
                         }
                     }
-                    Text("分类（可多选）", style = MaterialTheme.typography.titleMedium)
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        item {
-                            FilterChip(
-                                selected = ui.selectedCategories.isEmpty(),
-                                onClick = vm::clearCategoryFilter,
-                                label = { Text("全部") }
-                            )
-                        }
-                        items(categories) { c ->
-                            FilterChip(
-                                selected = c in ui.selectedCategories,
-                                onClick = { vm.toggleCategory(c) },
-                                label = { Text(c) }
-                            )
+
+                    Text("分类", style = MaterialTheme.typography.labelMedium, color = ProtoPalette.Muted)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OptionChip(text = "全部", selected = ui.selectedCategories.isEmpty(), onClick = vm::clearCategoryFilter)
+                        categories.forEach { c ->
+                            OptionChip(text = c, selected = c in ui.selectedCategories, onClick = { vm.toggleCategory(c) })
                         }
                     }
                 }
@@ -191,18 +268,19 @@ fun TrackerApp(vm: TrackerViewModel = viewModel()) {
         if (showSortSheet) {
             ModalBottomSheet(
                 onDismissRequest = { showSortSheet = false },
-                containerColor = MaterialTheme.colorScheme.surface
+                containerColor = ProtoPalette.Surface,
+                contentColor = ProtoPalette.Text,
             ) {
-                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("排序方式", style = MaterialTheme.typography.titleMedium)
-                    SortMode.entries.forEach { mode ->
-                        FilterChip(
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("排序方式", style = MaterialTheme.typography.titleLarge, color = ProtoPalette.Text)
+                    listOf(SortMode.VERSION_DESC, SortMode.VERSION_ASC).forEach { mode ->
+                        OptionRow(
+                            text = mode.label,
                             selected = ui.sortMode == mode,
                             onClick = {
                                 vm.setSortMode(mode)
                                 showSortSheet = false
-                            },
-                            label = { Text(mode.label) }
+                            }
                         )
                     }
                 }
@@ -210,43 +288,21 @@ fun TrackerApp(vm: TrackerViewModel = viewModel()) {
         }
 
         Scaffold(
-            containerColor = MaterialTheme.colorScheme.background,
-            topBar = {
-                TopAppBar(
-                    title = {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("绝区零成就")
-                            val latestVersion = installedVersions.firstOrNull()
-                            if (latestVersion != null) {
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(999.dp))
-                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
-                                        .padding(horizontal = 8.dp, vertical = 2.dp)
-                                ) {
-                                    Text(
-                                        text = latestVersion,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                            }
-                        }
-                    }
-                )
-            },
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    brush = Brush.radialGradient(
+                        colors = listOf(ProtoPalette.Glow, ProtoPalette.Bg),
+                    )
+                ),
+            containerColor = Color.Transparent,
+            contentColor = ProtoPalette.Text,
             snackbarHost = { SnackbarHost(snackbar) },
             bottomBar = {
-                NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
-                    HomeTab.entries.forEach {
-                        NavigationBarItem(
-                            selected = tab == it,
-                            onClick = { tab = it },
-                            icon = {},
-                            label = { Text(it.title) }
-                        )
-                    }
-                }
+                BottomTabBar(
+                    selected = tab,
+                    onSelect = { tab = it }
+                )
             }
         ) { padding ->
             when (tab) {
@@ -255,35 +311,41 @@ fun TrackerApp(vm: TrackerViewModel = viewModel()) {
                     ui = ui,
                     allItems = allItems,
                     filtered = sortedFiltered,
+                    latestVersion = installedVersions.firstOrNull(),
                     onOpenFilter = { showFilterSheet = true },
                     onOpenSort = { showSortSheet = true },
                     vm = vm,
                 )
-                HomeTab.STATS -> StatsTab(padding, allItems.filter { it.version !in ui.disabledVersions })
+
+                HomeTab.STATS -> StatsTab(
+                    padding = padding,
+                    allItems = allItems.filter { it.version !in ui.disabledVersions },
+                )
+
                 HomeTab.SETTINGS -> SettingsTab(
                     padding = padding,
-                    themeMode = ui.themeMode,
                     compactMode = ui.compactMode,
                     versions = versions,
                     disabledVersions = ui.disabledVersions,
                     onToggleVersionInstalled = vm::toggleVersionInstalled,
-                    onThemeModeChange = vm::setThemeMode,
                     onCompactModeChange = vm::setCompactMode,
                     onExport = { createExportLauncher.launch("zzz_progress_backup.json") },
                     onImport = { importLauncher.launch(arrayOf("application/json")) },
-                    onReset = vm::resetProgress,
+                    onReset = vm::requestResetProgress,
                 )
             }
         }
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ListTab(
     padding: PaddingValues,
-    ui: com.aitidi.zzztracker.viewmodel.TrackerUiState,
+    ui: TrackerUiState,
     allItems: List<AchievementItem>,
     filtered: List<AchievementItem>,
+    latestVersion: String?,
     onOpenFilter: () -> Unit,
     onOpenSort: () -> Unit,
     vm: TrackerViewModel,
@@ -301,11 +363,19 @@ private fun ListTab(
 
     BackHandler(enabled = isSearchFocused) { dismissSearch() }
 
-    Column(modifier = Modifier.padding(padding).fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp)) {
+    Column(
+        modifier = Modifier
+            .padding(padding)
+            .fillMaxSize()
+            .padding(horizontal = 14.dp, vertical = 10.dp)
+    ) {
+        ScreenTitle(title = "成就", badge = latestVersion)
         SummaryCard(done = done, total = allItems.size)
 
         Row(
-            modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
@@ -313,18 +383,21 @@ private fun ListTab(
                 value = ui.query,
                 onValueChange = vm::setQuery,
                 interactionSource = searchInteraction,
-                placeholder = { Text("搜索成就 / 输入关键词") },
+                placeholder = { Text("搜索成就 / 输入关键词", color = ProtoPalette.Muted) },
                 singleLine = true,
-                textStyle = MaterialTheme.typography.bodyLarge,
+                textStyle = TextStyle(fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurface),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(
-                    onSearch = { dismissSearch() },
-                    onDone = { dismissSearch() }
+                keyboardActions = KeyboardActions(onSearch = { dismissSearch() }, onDone = { dismissSearch() }),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = ProtoPalette.PurpleSoft,
+                    unfocusedBorderColor = ProtoPalette.Border,
+                    focusedContainerColor = ProtoPalette.SurfaceAlt,
+                    unfocusedContainerColor = ProtoPalette.SurfaceAlt,
                 ),
                 shape = RoundedCornerShape(14.dp),
                 modifier = Modifier
                     .weight(1f)
-                    .height(56.dp)
+                    .height(52.dp)
             )
 
             AnimatedVisibility(visible = isSearchFocused) {
@@ -335,25 +408,25 @@ private fun ListTab(
         }
 
         Row(
-            modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                FilterChip(selected = ui.onlyTodo, onClick = { vm.setOnlyTodo(!ui.onlyTodo) }, label = { Text("仅未完成") })
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                OptionChip(text = "仅未完成", selected = ui.onlyTodo, onClick = { vm.setOnlyTodo(!ui.onlyTodo) })
                 IconRectButton(
                     selected = ui.selectedVersions.isNotEmpty() || ui.selectedCategories.isNotEmpty(),
                     onClick = onOpenFilter
-                ) {
-                    Icon(Icons.Rounded.FilterList, contentDescription = "筛选")
-                }
+                ) { Icon(Icons.Rounded.FilterList, contentDescription = "筛选") }
+
                 IconRectButton(
                     selected = ui.sortMode != SortMode.VERSION_DESC,
                     onClick = onOpenSort
-                ) {
-                    Icon(Icons.Rounded.SwapVert, contentDescription = "排序")
-                }
+                ) { Icon(Icons.Rounded.SwapVert, contentDescription = "排序") }
             }
+
             IconRectButton(
                 selected = ui.lockProgressEditing,
                 onClick = vm::toggleLockProgressEditing
@@ -366,36 +439,34 @@ private fun ListTab(
         }
 
         if (ui.selectedVersions.isNotEmpty() || ui.selectedCategories.isNotEmpty()) {
-            LazyRow(modifier = Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                items(ui.selectedVersions.toList().sortedDescending()) { v ->
-                    FilterChip(
-                        selected = true,
-                        onClick = { vm.toggleVersion(v) },
-                        label = { Text("版本:$v") }
-                    )
+            FlowRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                ui.selectedVersions.toList().sortedDescending().forEach { v ->
+                    OptionChip(text = "版本:$v", selected = true, onClick = { vm.toggleVersion(v) })
                 }
-                items(ui.selectedCategories.toList().sorted()) { c ->
-                    FilterChip(
-                        selected = true,
-                        onClick = { vm.toggleCategory(c) },
-                        label = { Text("分类:$c") }
-                    )
+                ui.selectedCategories.toList().sorted().forEach { c ->
+                    OptionChip(text = "分类:$c", selected = true, onClick = { vm.toggleCategory(c) })
                 }
             }
         }
 
-        val itemSpacing = if (ui.compactMode) 4.dp else 12.dp
+        val itemSpacing = if (ui.compactMode) 8.dp else 10.dp
 
         if (filtered.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
                     text = if (ui.query.isNotBlank() || ui.selectedVersions.isNotEmpty() || ui.selectedCategories.isNotEmpty()) {
-                        "没有匹配结果，试试清空筛选"
+                        "暂无结果，试试清空筛选"
                     } else {
                         "暂无成就数据或已全部隐藏"
                     },
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color(0xCC8E8E93)
+                    color = ProtoPalette.Muted
                 )
             }
         } else {
@@ -403,11 +474,9 @@ private fun ListTab(
                 modifier = Modifier
                     .fillMaxSize()
                     .pointerInput(isSearchFocused) {
-                        detectTapGestures(onTap = {
-                            if (isSearchFocused) dismissSearch()
-                        })
+                        detectTapGestures(onTap = { if (isSearchFocused) dismissSearch() })
                     },
-                contentPadding = PaddingValues(top = 8.dp, bottom = 12.dp),
+                contentPadding = PaddingValues(top = 10.dp, bottom = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(itemSpacing)
             ) {
                 items(filtered, key = { it.id }, contentType = { "achievement" }) { item ->
@@ -415,7 +484,7 @@ private fun ListTab(
                         item = item,
                         compact = ui.compactMode,
                         lockProgressEditing = ui.lockProgressEditing,
-                        onToggle = vm::toggle
+                        onToggle = vm::toggle,
                     )
                 }
             }
@@ -423,15 +492,81 @@ private fun ListTab(
     }
 }
 
+private fun normalizeVersion(version: String): String {
+    val trimmed = version.trim()
+    return if (trimmed.startsWith("v", ignoreCase = true)) trimmed else "v$trimmed"
+}
+
+@Composable
+private fun ScreenTitle(title: String, badge: String? = null) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(text = title, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = ProtoPalette.Text)
+        if (!badge.isNullOrBlank()) {
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(999.dp))
+                    .background(ProtoPalette.Purple.copy(alpha = 0.22f))
+                    .border(1.dp, ProtoPalette.PurpleSoft.copy(alpha = 0.5f), RoundedCornerShape(999.dp))
+                    .padding(horizontal = 8.dp, vertical = 2.dp)
+            ) {
+                Text(text = normalizeVersion(badge), style = MaterialTheme.typography.labelSmall, color = ProtoPalette.PurpleSoft)
+            }
+        }
+    }
+}
+
+@Composable
+private fun OptionChip(text: String, selected: Boolean, onClick: () -> Unit) {
+    val bg = if (selected) ProtoPalette.SurfaceSelected else ProtoPalette.SurfaceAlt
+    val border = if (selected) ProtoPalette.PurpleSoft else ProtoPalette.Border
+    Box(
+        modifier = Modifier
+            .height(UiTokens.ControlHeight)
+            .clip(UiTokens.ControlCorner)
+            .background(bg)
+            .border(1.dp, border, UiTokens.ControlCorner)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(text, style = MaterialTheme.typography.labelMedium, color = ProtoPalette.Text)
+    }
+}
+
+@Composable
+private fun OptionRow(text: String, selected: Boolean, onClick: () -> Unit) {
+    val bg = if (selected) ProtoPalette.SurfaceSelected else ProtoPalette.SurfaceAlt
+    val border = if (selected) ProtoPalette.Purple else ProtoPalette.Border
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(38.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(bg)
+            .border(1.dp, border, RoundedCornerShape(10.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp),
+        contentAlignment = Alignment.CenterStart
+    ) {
+        Text(text, color = ProtoPalette.Text)
+    }
+}
+
 @Composable
 private fun IconRectButton(
     selected: Boolean,
     onClick: () -> Unit,
-    content: @Composable () -> Unit
+    content: @Composable () -> Unit,
 ) {
     val shape = UiTokens.ControlCorner
-    val bg = if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
-    val border = if (selected) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outline
+    val bg = if (selected) ProtoPalette.SurfaceSelected else ProtoPalette.SurfaceAlt
+    val border = if (selected) ProtoPalette.PurpleSoft else ProtoPalette.Border
 
     Box(
         modifier = Modifier
@@ -452,16 +587,32 @@ private fun SummaryCard(done: Int, total: Int) {
     val progress = if (total == 0) 0f else done.toFloat() / total.toFloat()
     Card(
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp),
-        modifier = Modifier.fillMaxWidth()
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, ProtoPalette.Border, RoundedCornerShape(18.dp))
     ) {
-        Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text("总进度", style = MaterialTheme.typography.labelMedium)
-            Text("$done / $total", style = MaterialTheme.typography.titleLarge)
-            Text("剩余 ${total - done} · ${"%.1f".format(progress * 100)}%", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-            Box(modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(999.dp)).background(Color(0x14000000))) {
-                Box(modifier = Modifier.fillMaxWidth(progress).fillMaxHeight().background(MaterialTheme.colorScheme.primary))
+        Column(
+            modifier = Modifier
+                .background(brush = Brush.linearGradient(listOf(ProtoPalette.Surface, ProtoPalette.SurfaceAlt)))
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text("总进度", style = MaterialTheme.typography.labelMedium, color = ProtoPalette.Muted)
+            Text("$done/$total", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = ProtoPalette.Text)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(8.dp)
+                    .clip(RoundedCornerShape(999.dp))
+                    .background(ProtoPalette.Border)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(progress)
+                        .height(8.dp)
+                        .background(ProtoPalette.Accent)
+                )
             }
         }
     }
@@ -472,43 +623,65 @@ private fun AchievementRow(
     item: AchievementItem,
     compact: Boolean,
     lockProgressEditing: Boolean,
-    onToggle: (AchievementItem, Boolean) -> Unit
+    onToggle: (AchievementItem, Boolean) -> Unit,
 ) {
-    val hPad = if (compact) 10.dp else 14.dp
-    val vPad = if (compact) 6.dp else 12.dp
+    val hPad = if (compact) 10.dp else 12.dp
+    val vPad = if (compact) 9.dp else 12.dp
+    val cardShape = RoundedCornerShape(14.dp)
 
     Card(
-        shape = RoundedCornerShape(if (compact) 10.dp else 16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (compact) 0.5.dp else 1.dp),
-        modifier = Modifier.fillMaxWidth()
+        shape = cardShape,
+        colors = CardDefaults.cardColors(containerColor = ProtoPalette.Surface),
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, ProtoPalette.Border, cardShape)
+            .alpha(if (item.progress) 0.72f else 1f)
     ) {
-        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = hPad, vertical = vPad), verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(
-                checked = item.progress,
-                enabled = !lockProgressEditing,
-                onCheckedChange = { checked -> if (!lockProgressEditing) onToggle(item, checked) }
-            )
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(if (compact) 4.dp else 6.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        item.name,
-                        maxLines = if (compact) 1 else 2,
-                        overflow = TextOverflow.Ellipsis,
-                        style = if (compact) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge
-                    )
-                    Text(if (item.progress) "●" else "○", color = if (item.progress) MaterialTheme.colorScheme.secondary else Color(0x668E8E93))
-                }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = hPad, vertical = vPad),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    item.description,
+                    text = item.name,
+                    maxLines = if (compact) 1 else 2,
+                    overflow = TextOverflow.Ellipsis,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = ProtoPalette.Text,
+                    textDecoration = if (item.progress) TextDecoration.LineThrough else TextDecoration.None
+                )
+                Text(
+                    text = item.description,
                     maxLines = if (compact) 1 else 2,
                     overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color(0xCC8E8E93)
+                    color = ProtoPalette.Muted
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    MetaTag(text = item.category)
-                    MetaTag(text = item.version)
+            }
+
+            Row(
+                modifier = Modifier.padding(start = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                MetaTag(item.category)
+                MetaTag(normalizeVersion(item.version))
+
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clip(RoundedCornerShape(7.dp))
+                        .background(if (item.progress) ProtoPalette.CheckDoneBg else ProtoPalette.CheckUndoneBg)
+                        .border(1.dp, ProtoPalette.Border, RoundedCornerShape(7.dp))
+                        .alpha(if (lockProgressEditing) 0.4f else 1f)
+                        .clickable(enabled = !lockProgressEditing) { onToggle(item, !item.progress) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(if (item.progress) "✓" else "", fontSize = 12.sp, color = ProtoPalette.Text)
                 }
             }
         }
@@ -520,53 +693,97 @@ private fun MetaTag(text: String) {
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(999.dp))
-            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f))
-            .padding(horizontal = 8.dp, vertical = 2.dp)
+            .background(ProtoPalette.Accent)
+            .padding(horizontal = 8.dp, vertical = 3.dp)
     ) {
         Text(
             text = text,
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.primary,
+            color = Color(0xFF111111),
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }
 
 @Composable
-private fun StatsTab(padding: PaddingValues, allItems: List<AchievementItem>) {
-    val grouped = allItems.groupBy { it.version }.toList().sortedBy { it.first }
-    val done = allItems.count { it.progress }
+private fun StatsTab(
+    padding: PaddingValues,
+    allItems: List<AchievementItem>,
+) {
     val total = allItems.size
+    val done = allItems.count { it.progress }
+    val rate = if (total == 0) 0 else (done * 100 / total)
 
-    Column(modifier = Modifier.padding(padding).fillMaxSize().padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        if (allItems.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("暂无可统计的成就数据", color = Color(0xCC8E8E93))
-            }
-        } else {
-            Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-                Row(modifier = Modifier.fillMaxWidth().padding(10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                    RingProgress(percent = if (total == 0) 0f else done.toFloat() / total)
-                    Column {
-                        Text("总完成率", style = MaterialTheme.typography.labelMedium)
-                        Text("$done / $total", style = MaterialTheme.typography.titleLarge)
-                    }
+    val grouped = allItems
+        .groupBy { it.version }
+        .toList()
+        .sortedByDescending { it.first }
+
+    Column(
+        modifier = Modifier
+            .padding(padding)
+            .fillMaxSize()
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        ScreenTitle("统计")
+
+        Card(
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(containerColor = ProtoPalette.Surface),
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.dp, ProtoPalette.Border, RoundedCornerShape(18.dp))
+        ) {
+            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("总完成率", color = ProtoPalette.Muted)
+                Text("$rate%", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = ProtoPalette.Text)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(8.dp)
+                        .clip(RoundedCornerShape(999.dp))
+                        .background(ProtoPalette.Border)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(rate / 100f)
+                            .height(8.dp)
+                            .background(ProtoPalette.Accent)
+                    )
                 }
             }
+        }
 
-            Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-                Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("版本柱状图", style = MaterialTheme.typography.titleMedium)
-                    grouped.forEach { (ver, list) ->
-                        val d = list.count { it.progress }
-                        val p = if (list.isEmpty()) 0f else d.toFloat() / list.size.toFloat()
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text(ver, modifier = Modifier.width(42.dp), style = MaterialTheme.typography.labelMedium)
-                            Box(modifier = Modifier.weight(1f).height(8.dp).clip(RoundedCornerShape(999.dp)).background(Color(0x12000000))) {
-                                Box(modifier = Modifier.fillMaxWidth(p).fillMaxHeight().background(MaterialTheme.colorScheme.primary))
+        if (grouped.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("暂无可统计的成就数据", color = ProtoPalette.Muted)
+            }
+        } else {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(bottom = 12.dp)) {
+                items(grouped) { (version, list) ->
+                    val d = list.count { it.progress }
+                    val p = if (list.isEmpty()) 0 else (d * 100 / list.size)
+                    Card(
+                        shape = RoundedCornerShape(14.dp),
+                        colors = CardDefaults.cardColors(containerColor = ProtoPalette.Surface),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(1.dp, ProtoPalette.Border, RoundedCornerShape(14.dp))
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text("$version 版本", fontWeight = FontWeight.SemiBold, color = ProtoPalette.Text)
+                                Text("完成 $d / ${list.size}", color = ProtoPalette.Muted, style = MaterialTheme.typography.bodyMedium)
                             }
-                            Text("${"%.0f".format(p * 100)}%", style = MaterialTheme.typography.labelMedium)
+                            MetaTag("$p%")
                         }
                     }
                 }
@@ -575,83 +792,154 @@ private fun StatsTab(padding: PaddingValues, allItems: List<AchievementItem>) {
     }
 }
 
-@Composable
-private fun RingProgress(percent: Float) {
-    Box(contentAlignment = Alignment.Center, modifier = Modifier.size(80.dp)) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            drawArc(
-                color = Color(0x220A84FF),
-                startAngle = -90f,
-                sweepAngle = 360f,
-                useCenter = false,
-                topLeft = Offset(6f, 6f),
-                size = Size(size.width - 12f, size.height - 12f),
-                style = androidx.compose.ui.graphics.drawscope.Stroke(width = 10f, cap = StrokeCap.Round)
-            )
-            drawArc(
-                color = Color(0xFF0A84FF),
-                startAngle = -90f,
-                sweepAngle = 360f * percent,
-                useCenter = false,
-                topLeft = Offset(6f, 6f),
-                size = Size(size.width - 12f, size.height - 12f),
-                style = androidx.compose.ui.graphics.drawscope.Stroke(width = 10f, cap = StrokeCap.Round)
-            )
-        }
-        Text("${"%.0f".format(percent * 100)}%", style = MaterialTheme.typography.labelMedium)
-    }
-}
-
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun SettingsTab(
     padding: PaddingValues,
-    themeMode: ThemeMode,
     compactMode: Boolean,
     versions: List<String>,
     disabledVersions: Set<String>,
     onToggleVersionInstalled: (String) -> Unit,
-    onThemeModeChange: (ThemeMode) -> Unit,
     onCompactModeChange: (Boolean) -> Unit,
     onExport: () -> Unit,
     onImport: () -> Unit,
     onReset: () -> Unit,
 ) {
-    Column(modifier = Modifier.padding(padding).fillMaxSize().padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text("显示设置", style = MaterialTheme.typography.titleLarge)
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            FilterChip(selected = themeMode == ThemeMode.SYSTEM, onClick = { onThemeModeChange(ThemeMode.SYSTEM) }, label = { Text("跟随系统") })
-            FilterChip(selected = themeMode == ThemeMode.LIGHT, onClick = { onThemeModeChange(ThemeMode.LIGHT) }, label = { Text("浅色") })
-            FilterChip(selected = themeMode == ThemeMode.DARK, onClick = { onThemeModeChange(ThemeMode.DARK) }, label = { Text("深色") })
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            FilterChip(selected = compactMode, onClick = { onCompactModeChange(true) }, label = { Text("紧凑") })
-            FilterChip(selected = !compactMode, onClick = { onCompactModeChange(false) }, label = { Text("舒适") })
-        }
+    Column(
+        modifier = Modifier
+            .padding(padding)
+            .fillMaxSize()
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        ScreenTitle("设置")
 
-        Text("版本模块", style = MaterialTheme.typography.titleLarge)
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            items(versions) { version ->
+        SettingsActionRow(
+            title = "紧凑模式",
+            desc = if (compactMode) "已启用" else "已关闭",
+            actionText = "切换",
+            actionSelected = compactMode,
+            onActionClick = { onCompactModeChange(!compactMode) }
+        )
+
+        SettingsActionRow(
+            title = "导出进度",
+            desc = "JSON",
+            actionText = "导出",
+            actionSelected = false,
+            onActionClick = onExport
+        )
+
+        SettingsActionRow(
+            title = "导入进度",
+            desc = "JSON",
+            actionText = "导入",
+            actionSelected = false,
+            onActionClick = onImport
+        )
+
+        SettingsActionRow(
+            title = "重置进度",
+            desc = "恢复为初始状态",
+            actionText = "重置",
+            actionSelected = false,
+            onActionClick = onReset
+        )
+
+        Text("版本模块", color = ProtoPalette.Muted, style = MaterialTheme.typography.labelMedium)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            versions.forEach { version ->
                 val installed = version !in disabledVersions
-                FilterChip(
+                OptionChip(
+                    text = if (installed) "$version 已安装" else "$version 已卸载",
                     selected = installed,
-                    onClick = { onToggleVersionInstalled(version) },
-                    label = { Text(if (installed) "$version 已安装" else "$version 已卸载") }
+                    onClick = { onToggleVersionInstalled(version) }
                 )
             }
         }
+    }
+}
 
-        Text("数据管理", style = MaterialTheme.typography.titleLarge)
-        OutlinedButton(onClick = onExport, modifier = Modifier.fillMaxWidth().height(UiTokens.ActionButtonHeight), shape = UiTokens.ActionButtonCorner) {
-            Icon(Icons.Rounded.FileUpload, contentDescription = null)
-            Text("  导出进度 JSON")
+@Composable
+private fun SettingsActionRow(
+    title: String,
+    desc: String,
+    actionText: String,
+    actionSelected: Boolean,
+    onActionClick: () -> Unit,
+) {
+    Card(
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = ProtoPalette.Surface),
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, ProtoPalette.Border, RoundedCornerShape(14.dp))
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column {
+                Text(title, fontWeight = FontWeight.SemiBold, color = ProtoPalette.Text)
+                Text(desc, color = ProtoPalette.Muted, style = MaterialTheme.typography.bodyMedium)
+            }
+            OptionChip(text = actionText, selected = actionSelected, onClick = onActionClick)
         }
-        OutlinedButton(onClick = onImport, modifier = Modifier.fillMaxWidth().height(UiTokens.ActionButtonHeight), shape = UiTokens.ActionButtonCorner) {
-            Icon(Icons.Rounded.FileDownload, contentDescription = null)
-            Text("  导入进度 JSON")
+    }
+}
+
+@Composable
+private fun BottomTabBar(selected: HomeTab, onSelect: (HomeTab) -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .padding(horizontal = 12.dp, vertical = 14.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(ProtoPalette.Surface)
+            .border(1.dp, ProtoPalette.Border, RoundedCornerShape(16.dp))
+            .height(58.dp)
+    ) {
+        Row(modifier = Modifier.fillMaxSize()) {
+            HomeTab.entries.forEach { tab ->
+                BottomTabButton(
+                    modifier = Modifier.weight(1f),
+                    selected = selected == tab,
+                    title = tab.title,
+                    icon = tab.icon,
+                    onClick = { onSelect(tab) },
+                )
+            }
         }
-        OutlinedButton(onClick = onReset, modifier = Modifier.fillMaxWidth().height(UiTokens.ActionButtonHeight), shape = UiTokens.ActionButtonCorner) {
-            Icon(Icons.Rounded.Restore, contentDescription = null)
-            Text("  重置全部进度")
-        }
+    }
+}
+
+@Composable
+private fun BottomTabButton(
+    modifier: Modifier,
+    selected: Boolean,
+    title: String,
+    icon: ImageVector,
+    onClick: () -> Unit,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .clip(RoundedCornerShape(0.dp))
+            .background(if (selected) ProtoPalette.TabSelectedBg else Color.Transparent)
+            .clickable(onClick = onClick),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(icon, contentDescription = title, tint = if (selected) ProtoPalette.TabSelectedText else ProtoPalette.Muted, modifier = Modifier.size(16.dp))
+        Text(
+            text = title,
+            color = if (selected) ProtoPalette.TabSelectedText else ProtoPalette.Muted,
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.padding(top = 2.dp)
+        )
     }
 }

@@ -9,6 +9,8 @@ import com.aitidi.zzztracker.data.db.AppDatabase
 import com.aitidi.zzztracker.data.repo.TrackerRepository
 import com.aitidi.zzztracker.model.AchievementItem
 import com.aitidi.zzztracker.ui.theme.ThemeMode
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -20,9 +22,7 @@ import kotlinx.coroutines.launch
 
 enum class SortMode(val label: String) {
     VERSION_DESC("版本：新 → 旧"),
-    VERSION_ASC("版本：旧 → 新"),
-    TODO_FIRST("未完成优先"),
-    NAME("名称")
+    VERSION_ASC("版本：旧 → 新")
 }
 
 data class TrackerUiState(
@@ -33,7 +33,7 @@ data class TrackerUiState(
     val disabledVersions: Set<String> = emptySet(),
     val sortMode: SortMode = SortMode.VERSION_DESC,
     val lockProgressEditing: Boolean = false,
-    val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    val themeMode: ThemeMode = ThemeMode.DARK,
     val compactMode: Boolean = true,
 )
 
@@ -41,11 +41,17 @@ class TrackerViewModel(app: Application) : AndroidViewModel(app) {
     private val repo = TrackerRepository(app, AppDatabase.get(app).achievementDao())
     private val prefs = app.getSharedPreferences("tracker_prefs", Context.MODE_PRIVATE)
 
+    private var resetTapCount = 0
+    private val resetConfirmTotal = 5
+    private var resetInProgress = false
+    private var resetHintTimerJob: Job? = null
+    private val resetHintTimeoutMs = 3500L
+
     val items = repo.observeItems().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     private val _ui = MutableStateFlow(loadUiState())
     val ui: StateFlow<TrackerUiState> = _ui.asStateFlow()
 
-    private val _events = MutableSharedFlow<String>()
+    private val _events = MutableSharedFlow<String>(replay = 0, extraBufferCapacity = 16)
     val events = _events.asSharedFlow()
 
     init {
@@ -110,10 +116,34 @@ class TrackerViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun resetProgress() {
+    fun requestResetProgress() {
+        if (resetInProgress) {
+            _events.tryEmit("正在重置中，请稍候…")
+            return
+        }
+
+        resetTapCount += 1
+        if (resetTapCount < resetConfirmTotal) {
+            _events.tryEmit("重置确认 ${resetTapCount}/${resetConfirmTotal}，继续点击“重置”")
+            resetHintTimerJob?.cancel()
+            resetHintTimerJob = viewModelScope.launch {
+                delay(resetHintTimeoutMs)
+                if (!resetInProgress && resetTapCount in 1 until resetConfirmTotal) {
+                    resetTapCount = 0
+                }
+            }
+            return
+        }
+
+        resetHintTimerJob?.cancel()
+        resetTapCount = 0
+        resetInProgress = true
+        _events.tryEmit("重置中…")
         viewModelScope.launch {
-            repo.resetAllProgress()
-            _events.emit("已重置全部进度")
+            runCatching { repo.resetAllProgress() }
+                .onSuccess { _events.tryEmit("已重置全部进度（${resetConfirmTotal}/${resetConfirmTotal}）") }
+                .onFailure { _events.tryEmit("重置失败：${it.message ?: "未知错误"}") }
+            resetInProgress = false
         }
     }
 
@@ -123,11 +153,19 @@ class TrackerViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun loadUiState(): TrackerUiState {
-        val theme = runCatching { ThemeMode.valueOf(prefs.getString("themeMode", ThemeMode.SYSTEM.name)!!) }
-            .getOrDefault(ThemeMode.SYSTEM)
+        val migratedThemeV2 = prefs.getBoolean("themeMigratedV2", false)
+        val rawTheme = prefs.getString("themeMode", ThemeMode.DARK.name) ?: ThemeMode.DARK.name
+        val theme = when {
+            !migratedThemeV2 && rawTheme == ThemeMode.SYSTEM.name -> ThemeMode.DARK
+            else -> runCatching { ThemeMode.valueOf(rawTheme) }.getOrDefault(ThemeMode.DARK)
+        }
+        if (!migratedThemeV2) {
+            prefs.edit().putBoolean("themeMigratedV2", true).apply()
+        }
+
         val rawSort = prefs.getString("sortMode", SortMode.VERSION_DESC.name) ?: SortMode.VERSION_DESC.name
         val sort = when (rawSort) {
-            "STATUS" -> SortMode.TODO_FIRST // migration from old enum
+            "STATUS", "TODO_FIRST", "NAME" -> SortMode.VERSION_DESC // migration from old enum values
             else -> runCatching { SortMode.valueOf(rawSort) }.getOrDefault(SortMode.VERSION_DESC)
         }
         return TrackerUiState(

@@ -5,53 +5,58 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
 
 private val DarkColors = darkColorScheme(
-    primary = IOSBlue,
-    onPrimary = androidx.compose.ui.graphics.Color.White,
-    primaryContainer = androidx.compose.ui.graphics.Color(0x332A9BFF),
-    onPrimaryContainer = androidx.compose.ui.graphics.Color(0xFFD9ECFF),
+    primary = ZzzPurple,
+    onPrimary = Color.White,
+    primaryContainer = Color(0xFF32295A),
+    onPrimaryContainer = ZzzPurpleSoft,
 
-    secondary = IOSBlue,
-    onSecondary = androidx.compose.ui.graphics.Color.White,
-    secondaryContainer = androidx.compose.ui.graphics.Color(0x332A9BFF),
-    onSecondaryContainer = androidx.compose.ui.graphics.Color(0xFFD9ECFF),
+    secondary = ZzzAccent,
+    onSecondary = Color(0xFF111111),
+    secondaryContainer = Color(0xFF2F3140),
+    onSecondaryContainer = ZzzText,
 
-    tertiary = IOSBlue,
-    tertiaryContainer = androidx.compose.ui.graphics.Color(0x332A9BFF),
-    onTertiaryContainer = androidx.compose.ui.graphics.Color(0xFFD9ECFF),
+    tertiary = ZzzPurpleSoft,
+    onTertiary = Color(0xFF111111),
+    tertiaryContainer = Color(0xFF2F3140),
+    onTertiaryContainer = ZzzText,
 
     background = DarkBackground,
     surface = DarkSurface,
-    surfaceVariant = DarkSurface,
+    surfaceVariant = DarkCard,
 
-    onBackground = androidx.compose.ui.graphics.Color(0xFFF2F2F7),
-    onSurface = androidx.compose.ui.graphics.Color(0xFFF2F2F7),
+    onBackground = ZzzText,
+    onSurface = ZzzText,
+    outline = ZzzBorder,
 )
 
 private val LightColors = lightColorScheme(
-    primary = IOSBlue,
-    onPrimary = androidx.compose.ui.graphics.Color.White,
-    primaryContainer = androidx.compose.ui.graphics.Color(0xFFD9ECFF),
-    onPrimaryContainer = androidx.compose.ui.graphics.Color(0xFF004A87),
+    primary = ZzzPurple,
+    onPrimary = Color.White,
+    primaryContainer = Color(0xFFE3DCFF),
+    onPrimaryContainer = Color(0xFF2F225F),
 
-    secondary = IOSBlue,
-    onSecondary = androidx.compose.ui.graphics.Color.White,
-    secondaryContainer = androidx.compose.ui.graphics.Color(0xFFD9ECFF),
-    onSecondaryContainer = androidx.compose.ui.graphics.Color(0xFF004A87),
+    secondary = Color(0xFF637900),
+    onSecondary = Color.White,
+    secondaryContainer = Color(0xFFF0F8C8),
+    onSecondaryContainer = Color(0xFF1E2A00),
 
-    tertiary = IOSBlue,
-    tertiaryContainer = androidx.compose.ui.graphics.Color(0xFFD9ECFF),
-    onTertiaryContainer = androidx.compose.ui.graphics.Color(0xFF004A87),
+    tertiary = ZzzPurpleSoft,
+    onTertiary = Color(0xFF2E255A),
+    tertiaryContainer = Color(0xFFEDE7FF),
+    onTertiaryContainer = Color(0xFF2E255A),
 
     background = LightBackground,
     surface = LightSurface,
-    surfaceVariant = LightBackground,
+    surfaceVariant = LightCard,
 
-    onBackground = androidx.compose.ui.graphics.Color(0xFF1C1C1E),
-    onSurface = androidx.compose.ui.graphics.Color(0xFF1C1C1E),
+    onBackground = Color(0xFF1C1C1E),
+    onSurface = Color(0xFF1C1C1E),
+    outline = Color(0xFFD2C9F8),
 )
 
 @Composable
