@@ -104,6 +104,7 @@ private object ProtoPalette {
     val Purple = Color(0xFF896CFE)
     val PurpleSoft = Color(0xFFB3A0FF)
     val Accent = Color(0xFFE2F163)
+    val Text = Color(0xFFF2F2F2)
     val Muted = Color(0xFFA6A6A6)
     val Border = Color(0xFF3A3A3A)
     val Bg = Color(0xFF1E1E1E)
@@ -220,6 +221,7 @@ fun TrackerApp(vm: TrackerViewModel = viewModel()) {
                     )
                 ),
             containerColor = Color.Transparent,
+            contentColor = ProtoPalette.Text,
             snackbarHost = { SnackbarHost(snackbar) },
             bottomBar = {
                 BottomTabBar(
@@ -426,7 +428,7 @@ private fun ScreenTitle(title: String, badge: String? = null) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Text(text = title, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
+        Text(text = title, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = ProtoPalette.Text)
         if (!badge.isNullOrBlank()) {
             Box(
                 modifier = Modifier
@@ -455,7 +457,7 @@ private fun OptionChip(text: String, selected: Boolean, onClick: () -> Unit) {
             .padding(horizontal = 12.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(text, style = MaterialTheme.typography.labelMedium)
+        Text(text, style = MaterialTheme.typography.labelMedium, color = ProtoPalette.Text)
     }
 }
 
@@ -474,7 +476,7 @@ private fun OptionRow(text: String, selected: Boolean, onClick: () -> Unit) {
             .padding(horizontal = 12.dp),
         contentAlignment = Alignment.CenterStart
     ) {
-        Text(text)
+        Text(text, color = ProtoPalette.Text)
     }
 }
 
@@ -519,7 +521,7 @@ private fun SummaryCard(done: Int, total: Int) {
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text("总进度", style = MaterialTheme.typography.labelMedium, color = ProtoPalette.Muted)
-            Text("$done/$total", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            Text("$done/$total", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = ProtoPalette.Text)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -571,6 +573,7 @@ private fun AchievementRow(
                     overflow = TextOverflow.Ellipsis,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold,
+                    color = ProtoPalette.Text,
                     textDecoration = if (item.progress) TextDecoration.LineThrough else TextDecoration.None
                 )
                 Text(
@@ -600,7 +603,7 @@ private fun AchievementRow(
                         .clickable(enabled = !lockProgressEditing) { onToggle(item, !item.progress) },
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(if (item.progress) "✓" else "", fontSize = 12.sp)
+                    Text(if (item.progress) "✓" else "", fontSize = 12.sp, color = ProtoPalette.Text)
                 }
             }
         }
@@ -657,7 +660,7 @@ private fun StatsTab(
         ) {
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("总完成率", color = ProtoPalette.Muted)
-                Text("$rate%", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                Text("$rate%", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = ProtoPalette.Text)
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -699,7 +702,7 @@ private fun StatsTab(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column {
-                                Text("$version 版本", fontWeight = FontWeight.SemiBold)
+                                Text("$version 版本", fontWeight = FontWeight.SemiBold, color = ProtoPalette.Text)
                                 Text("完成 $d / ${list.size}", color = ProtoPalette.Muted, style = MaterialTheme.typography.bodyMedium)
                             }
                             MetaTag("$p%")
@@ -811,7 +814,7 @@ private fun SettingsActionRow(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Column {
-                Text(title, fontWeight = FontWeight.SemiBold)
+                Text(title, fontWeight = FontWeight.SemiBold, color = ProtoPalette.Text)
                 Text(desc, color = ProtoPalette.Muted, style = MaterialTheme.typography.bodyMedium)
             }
             OptionChip(text = actionText, selected = actionSelected, onClick = onActionClick)
