@@ -42,9 +42,14 @@
     .icon-btn.active { background: #2f3140; border-color: var(--primary-soft); }
     .list { margin-top: 12px; display: grid; gap: 10px; }
     .item { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 12px; display:flex; justify-content: space-between; align-items: center; }
+    .item.done { opacity: .72; }
+    .item.done h4 { text-decoration: line-through; }
     .item h4 { margin: 0; font-size: 16px; }
     .item p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+    .right-pack { display:flex; align-items:center; gap:8px; }
     .badge { font-size: 12px; color: #111; background: var(--accent); border-radius: 999px; padding: 4px 8px; }
+    .done-btn { width: 24px; height: 24px; border-radius: 7px; border:1px solid var(--border); background:#2b2b2b; color: var(--text); cursor:pointer; }
+    .item.done .done-btn { background: #3a315f; border-color: var(--primary-soft); }
     .bottom-nav { position: absolute; left: 12px; right: 12px; bottom: 14px; height: 58px; border-radius: 16px; border: 1px solid var(--border); background: #242424; display: grid; grid-template-columns: repeat(3,1fr); overflow: hidden; }
     .nav-btn { border: 0; background: transparent; color: var(--muted); font-size: 13px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap: 4px; cursor:pointer; }
     .nav-btn.active { color: var(--text); background: #2b2b2b; }
@@ -118,20 +123,30 @@
 
   <script>
     const data = [
-      ['今天也要打卡', '每日任务完成 1 次', '2.0'],
-      ['喧响测试员', '完成一次高危副本', '1.9'],
-      ['完美闪避大师', '10 次极限闪避', '2.0'],
-      ['预算控制', '累计获取 100000 丁尼', '1.8'],
-      ['收藏家', '解锁 20 条图鉴', '1.7'],
+      { title:'今天也要打卡', desc:'每日任务完成 1 次', ver:'2.0', done:false },
+      { title:'喧响测试员', desc:'完成一次高危副本', ver:'1.9', done:false },
+      { title:'完美闪避大师', desc:'10 次极限闪避', ver:'2.0', done:true },
+      { title:'预算控制', desc:'累计获取 100000 丁尼', ver:'1.8', done:false },
+      { title:'收藏家', desc:'解锁 20 条图鉴', ver:'1.7', done:true },
     ];
     const list = document.getElementById('list');
-    data.forEach(([t,d,v], i) => {
-      const done = i % 2 === 0;
-      const el = document.createElement('div');
-      el.className = 'item';
-      el.innerHTML = `<div><h4>${t}</h4><p>${d}</p></div><span class="badge">v${v}</span>`;
-      list.appendChild(el);
-    });
+
+    function renderList() {
+      list.innerHTML = '';
+      data.forEach((it, idx) => {
+        const el = document.createElement('div');
+        el.className = `item ${it.done ? 'done' : ''}`;
+        el.innerHTML = `
+          <div><h4>${it.title}</h4><p>${it.desc}</p></div>
+          <div class="right-pack">
+            <span class="badge">v${it.ver}</span>
+            <button class="done-btn" data-idx="${idx}" title="标记完成">${it.done ? '✓' : ''}</button>
+          </div>`;
+        list.appendChild(el);
+      });
+    }
+
+    renderList();
 
     const sortBtn = document.getElementById('sortBtn');
     const filterBtn = document.getElementById('filterBtn');
@@ -168,6 +183,14 @@
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         document.getElementById(`screen-${key}`).classList.add('active');
       };
+    });
+
+    list.addEventListener('click', (e) => {
+      const btn = e.target.closest('.done-btn');
+      if (!btn) return;
+      const idx = Number(btn.dataset.idx);
+      data[idx].done = !data[idx].done;
+      renderList();
     });
   </script>
 </body>
