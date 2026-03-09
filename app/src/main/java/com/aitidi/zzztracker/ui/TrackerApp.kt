@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -100,17 +101,78 @@ private object UiTokens {
     val ActionButtonHeight = 32.dp
 }
 
+private data class ProtoColors(
+    val purple: Color,
+    val purpleSoft: Color,
+    val accent: Color,
+    val text: Color,
+    val muted: Color,
+    val border: Color,
+    val bg: Color,
+    val surface: Color,
+    val surfaceAlt: Color,
+    val surfaceSelected: Color,
+    val glow: Color,
+    val tabSelectedBg: Color,
+    val tabSelectedText: Color,
+    val checkDoneBg: Color,
+    val checkUndoneBg: Color,
+)
+
+private val DarkProto = ProtoColors(
+    purple = Color(0xFF896CFE),
+    purpleSoft = Color(0xFFB3A0FF),
+    accent = Color(0xFFE2F163),
+    text = Color(0xFFF2F2F2),
+    muted = Color(0xFFA6A6A6),
+    border = Color(0xFF3A3A3A),
+    bg = Color(0xFF1E1E1E),
+    surface = Color(0xFF232323),
+    surfaceAlt = Color(0xFF262626),
+    surfaceSelected = Color(0xFF2F3140),
+    glow = Color(0xFF3E2A7C),
+    tabSelectedBg = Color(0xFF2B2B2B),
+    tabSelectedText = Color(0xFFFFFFFF),
+    checkDoneBg = Color(0xFF3A315F),
+    checkUndoneBg = Color(0xFF2B2B2B),
+)
+
+private val LightProto = ProtoColors(
+    purple = Color(0xFF7C5BFF),
+    purpleSoft = Color(0xFF8A71FF),
+    accent = Color(0xFFD2E447),
+    text = Color(0xFF1C1C1E),
+    muted = Color(0xFF5F5F66),
+    border = Color(0xFFDADAE2),
+    bg = Color(0xFFF5F4FB),
+    surface = Color(0xFFFFFFFF),
+    surfaceAlt = Color(0xFFF8F7FC),
+    surfaceSelected = Color(0xFFEAE5FF),
+    glow = Color(0xFFEDE6FF),
+    tabSelectedBg = Color(0xFFEAE5FF),
+    tabSelectedText = Color(0xFF2F225F),
+    checkDoneBg = Color(0xFFDCD4FF),
+    checkUndoneBg = Color(0xFFF0EFF5),
+)
+
 private object ProtoPalette {
-    val Purple = Color(0xFF896CFE)
-    val PurpleSoft = Color(0xFFB3A0FF)
-    val Accent = Color(0xFFE2F163)
-    val Text = Color(0xFFF2F2F2)
-    val Muted = Color(0xFFA6A6A6)
-    val Border = Color(0xFF3A3A3A)
-    val Bg = Color(0xFF1E1E1E)
-    val Surface = Color(0xFF232323)
-    val SurfaceAlt = Color(0xFF262626)
-    val SurfaceSelected = Color(0xFF2F3140)
+    var current: ProtoColors = DarkProto
+
+    val Purple get() = current.purple
+    val PurpleSoft get() = current.purpleSoft
+    val Accent get() = current.accent
+    val Text get() = current.text
+    val Muted get() = current.muted
+    val Border get() = current.border
+    val Bg get() = current.bg
+    val Surface get() = current.surface
+    val SurfaceAlt get() = current.surfaceAlt
+    val SurfaceSelected get() = current.surfaceSelected
+    val Glow get() = current.glow
+    val TabSelectedBg get() = current.tabSelectedBg
+    val TabSelectedText get() = current.tabSelectedText
+    val CheckDoneBg get() = current.checkDoneBg
+    val CheckUndoneBg get() = current.checkUndoneBg
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -157,20 +219,26 @@ fun TrackerApp(vm: TrackerViewModel = viewModel()) {
             when (ui.sortMode) {
                 SortMode.VERSION_DESC -> filtered.sortedWith(compareByDescending<AchievementItem> { it.version }.thenBy { it.name })
                 SortMode.VERSION_ASC -> filtered.sortedWith(compareBy<AchievementItem> { it.version }.thenBy { it.name })
-                SortMode.TODO_FIRST -> filtered.sortedWith(compareBy<AchievementItem> { it.progress }.thenByDescending { it.version }.thenBy { it.name })
-                SortMode.NAME -> filtered.sortedBy { it.name }
             }
         }
     }
+
+    val useDarkPalette = when (ui.themeMode) {
+        ThemeMode.SYSTEM -> isSystemInDarkTheme()
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+    }
+    ProtoPalette.current = if (useDarkPalette) DarkProto else LightProto
 
     ZzzTrackerTheme(mode = ui.themeMode) {
         if (showFilterSheet) {
             ModalBottomSheet(
                 onDismissRequest = { showFilterSheet = false },
                 containerColor = ProtoPalette.Surface,
+                contentColor = ProtoPalette.Text,
             ) {
                 Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("筛选", style = MaterialTheme.typography.titleLarge)
+                    Text("筛选", style = MaterialTheme.typography.titleLarge, color = ProtoPalette.Text)
 
                     Text("版本", style = MaterialTheme.typography.labelMedium, color = ProtoPalette.Muted)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -195,10 +263,11 @@ fun TrackerApp(vm: TrackerViewModel = viewModel()) {
             ModalBottomSheet(
                 onDismissRequest = { showSortSheet = false },
                 containerColor = ProtoPalette.Surface,
+                contentColor = ProtoPalette.Text,
             ) {
                 Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("排序方式", style = MaterialTheme.typography.titleLarge)
-                    SortMode.entries.forEach { mode ->
+                    Text("排序方式", style = MaterialTheme.typography.titleLarge, color = ProtoPalette.Text)
+                    listOf(SortMode.VERSION_DESC, SortMode.VERSION_ASC).forEach { mode ->
                         OptionRow(
                             text = mode.label,
                             selected = ui.sortMode == mode,
@@ -217,7 +286,7 @@ fun TrackerApp(vm: TrackerViewModel = viewModel()) {
                 .fillMaxSize()
                 .background(
                     brush = Brush.radialGradient(
-                        colors = listOf(Color(0xFF3E2A7C), ProtoPalette.Bg),
+                        colors = listOf(ProtoPalette.Glow, ProtoPalette.Bg),
                     )
                 ),
             containerColor = Color.Transparent,
@@ -419,6 +488,11 @@ private fun ListTab(
     }
 }
 
+private fun normalizeVersion(version: String): String {
+    val trimmed = version.trim()
+    return if (trimmed.startsWith("v", ignoreCase = true)) trimmed else "v$trimmed"
+}
+
 @Composable
 private fun ScreenTitle(title: String, badge: String? = null) {
     Row(
@@ -437,7 +511,7 @@ private fun ScreenTitle(title: String, badge: String? = null) {
                     .border(1.dp, ProtoPalette.PurpleSoft.copy(alpha = 0.5f), RoundedCornerShape(999.dp))
                     .padding(horizontal = 8.dp, vertical = 2.dp)
             ) {
-                Text(text = badge, style = MaterialTheme.typography.labelSmall, color = ProtoPalette.PurpleSoft)
+                Text(text = normalizeVersion(badge), style = MaterialTheme.typography.labelSmall, color = ProtoPalette.PurpleSoft)
             }
         }
     }
@@ -463,7 +537,7 @@ private fun OptionChip(text: String, selected: Boolean, onClick: () -> Unit) {
 
 @Composable
 private fun OptionRow(text: String, selected: Boolean, onClick: () -> Unit) {
-    val bg = if (selected) Color(0xFF32295A) else ProtoPalette.SurfaceAlt
+    val bg = if (selected) ProtoPalette.SurfaceSelected else ProtoPalette.SurfaceAlt
     val border = if (selected) ProtoPalette.Purple else ProtoPalette.Border
     Box(
         modifier = Modifier
@@ -591,13 +665,13 @@ private fun AchievementRow(
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 MetaTag(item.category)
-                MetaTag("v${item.version}")
+                MetaTag(normalizeVersion(item.version))
 
                 Box(
                     modifier = Modifier
                         .size(24.dp)
                         .clip(RoundedCornerShape(7.dp))
-                        .background(if (item.progress) Color(0xFF3A315F) else Color(0xFF2B2B2B))
+                        .background(if (item.progress) ProtoPalette.CheckDoneBg else ProtoPalette.CheckUndoneBg)
                         .border(1.dp, ProtoPalette.Border, RoundedCornerShape(7.dp))
                         .alpha(if (lockProgressEditing) 0.4f else 1f)
                         .clickable(enabled = !lockProgressEditing) { onToggle(item, !item.progress) },
@@ -860,15 +934,15 @@ private fun BottomTabButton(
         modifier = modifier
             .fillMaxSize()
             .clip(RoundedCornerShape(0.dp))
-            .background(if (selected) Color(0xFF2B2B2B) else Color.Transparent)
+            .background(if (selected) ProtoPalette.TabSelectedBg else Color.Transparent)
             .clickable(onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Icon(icon, contentDescription = title, tint = if (selected) Color.White else ProtoPalette.Muted, modifier = Modifier.size(16.dp))
+        Icon(icon, contentDescription = title, tint = if (selected) ProtoPalette.TabSelectedText else ProtoPalette.Muted, modifier = Modifier.size(16.dp))
         Text(
             text = title,
-            color = if (selected) Color.White else ProtoPalette.Muted,
+            color = if (selected) ProtoPalette.TabSelectedText else ProtoPalette.Muted,
             style = MaterialTheme.typography.labelSmall,
             modifier = Modifier.padding(top = 2.dp)
         )
