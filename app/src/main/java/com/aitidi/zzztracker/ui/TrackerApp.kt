@@ -85,6 +85,12 @@ import com.aitidi.zzztracker.viewmodel.TrackerViewModel
 
 private enum class HomeTab(val title: String) { LIST("成就"), STATS("统计"), SETTINGS("设置") }
 
+private object UiTokens {
+    val ControlCorner = RoundedCornerShape(10.dp)
+    val ControlHeight = 32.dp
+    val IconButtonWidth = 40.dp
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TrackerApp(vm: TrackerViewModel = viewModel()) {
@@ -420,14 +426,14 @@ private fun IconRectButton(
     onClick: () -> Unit,
     content: @Composable () -> Unit
 ) {
-    val shape = RoundedCornerShape(10.dp)
+    val shape = UiTokens.ControlCorner
     val bg = if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
     val border = if (selected) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outline
 
     Box(
         modifier = Modifier
-            .width(40.dp)
-            .height(32.dp)
+            .width(UiTokens.IconButtonWidth)
+            .height(UiTokens.ControlHeight)
             .clip(shape)
             .background(bg)
             .border(1.dp, border, shape)
