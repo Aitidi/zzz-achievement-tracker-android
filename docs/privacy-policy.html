@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Privacy Policy - ZZZ Achievement Tracker</title>
+  <meta name="description" content="Privacy Policy for ZZZ Achievement Tracker (ZZZ成就)">
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #0f1115;
+      --card: #171a21;
+      --text: #f5f7fb;
+      --muted: #b4bed0;
+      --accent: #8b7cff;
+      --accent-2: #c8ff6a;
+      --line: rgba(255,255,255,.12);
+      --light-bg: #f6f7fb;
+      --light-card: #ffffff;
+      --light-text: #1a1d24;
+      --light-muted: #5e6678;
+      --shadow: 0 10px 30px rgba(0,0,0,.18);
+      --radius: 18px;
+    }
+    @media (prefers-color-scheme: light) {
+      body {
+        background: radial-gradient(circle at top, #ebe7ff 0, var(--light-bg) 42%);
+        color: var(--light-text);
+      }
+      .card {
+        background: var(--light-card);
+        border-color: rgba(26,29,36,.08);
+        box-shadow: var(--shadow);
+      }
+      .muted, .lang-note, li, p { color: var(--light-muted); }
+      h1, h2, h3, strong, .pill { color: var(--light-text); }
+      a { color: #5c49ff; }
+      code { background: rgba(92,73,255,.08); }
+    }
+    @media (prefers-color-scheme: dark) {
+      body {
+        background: radial-gradient(circle at top, #1d163a 0, var(--bg) 42%);
+        color: var(--text);
+      }
+      .card {
+        background: color-mix(in srgb, var(--card) 92%, transparent);
+        border-color: var(--line);
+        box-shadow: var(--shadow);
+      }
+      .muted, .lang-note, li, p { color: var(--muted); }
+      h1, h2, h3, strong, .pill { color: var(--text); }
+      a { color: #a99cff; }
+      code { background: rgba(139,124,255,.14); }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font: 16px/1.7 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    .wrap {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 32px 18px 56px;
+    }
+    .hero {
+      padding: 20px 0 10px;
+    }
+    .pill {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(139,124,255,.28);
+      background: rgba(139,124,255,.12);
+      font-size: 13px;
+      margin-bottom: 14px;
+    }
+    h1 {
+      margin: 0 0 12px;
+      font-size: clamp(30px, 5vw, 48px);
+      line-height: 1.12;
+    }
+    h2 {
+      margin: 0 0 12px;
+      font-size: 24px;
+      line-height: 1.25;
+    }
+    h3 {
+      margin: 18px 0 10px;
+      font-size: 18px;
+    }
+    p, li { margin: 0 0 10px; }
+    ul { margin: 0; padding-left: 20px; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 18px;
+      margin-top: 20px;
+    }
+    .card {
+      border: 1px solid;
+      border-radius: var(--radius);
+      padding: 22px;
+      backdrop-filter: blur(8px);
+    }
+    .section { margin-top: 18px; }
+    .muted { font-size: 15px; }
+    .lang-note {
+      margin-top: 8px;
+      font-size: 14px;
+    }
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(139,124,255,.45), transparent);
+      margin: 28px 0;
+      border: 0;
+    }
+    a { text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    code {
+      padding: 2px 6px;
+      border-radius: 8px;
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      font-size: 0.95em;
+    }
+    .footer {
+      margin-top: 26px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="hero">
+      <div class="pill">Privacy Policy · 隐私权政策</div>
+      <h1>ZZZ Achievement Tracker / ZZZ成就</h1>
+      <p class="muted">
+        Effective date: 2026-03-17<br>
+        Developer: Aitidi<br>
+        Package name: <code>com.aitidi.zzzachievementtracker</code>
+      </p>
+      <p class="lang-note">This page is provided in English first, followed by a Chinese version for convenience.</p>
+    </section>
+
+    <div class="grid">
+      <section class="card">
+        <h2>English</h2>
+        <div class="section">
+          <h3>1. Overview</h3>
+          <p>
+            ZZZ Achievement Tracker is an offline Android app for tracking Zenless Zone Zero achievements.
+            The app is designed to store progress locally on your device and does not require an account.
+          </p>
+        </div>
+        <div class="section">
+          <h3>2. Information We Collect</h3>
+          <p>We do <strong>not</strong> collect personal information through our own servers.</p>
+          <ul>
+            <li><strong>Achievement progress data</strong>: Stored locally on your device so the app can show your completion status.</li>
+            <li><strong>Import/export files</strong>: If you choose to import or export JSON backup files, the app accesses only the file you explicitly select through the Android system file picker.</li>
+            <li><strong>No account data</strong>: The app does not require sign-in or account registration.</li>
+            <li><strong>No analytics or ads</strong>: The app does not use advertising SDKs, analytics SDKs, or crash reporting services.</li>
+          </ul>
+        </div>
+        <div class="section">
+          <h3>3. How We Use Data</h3>
+          <ul>
+            <li>To display your achievement progress inside the app.</li>
+            <li>To let you back up or restore progress when you request import/export.</li>
+          </ul>
+        </div>
+        <div class="section">
+          <h3>4. Data Sharing</h3>
+          <p>
+            We do not sell, rent, or share your data with third parties. The app does not upload your achievement data to any developer-operated server.
+          </p>
+        </div>
+        <div class="section">
+          <h3>5. Device Storage and System Backup</h3>
+          <p>
+            Your progress is stored locally on your device. Depending on your Android settings, app data may also be included in Android system backup handled by your device or Google account. Any such backup is controlled by the Android platform, not by this app's own server infrastructure.
+          </p>
+          <p>
+            If you export a backup file to a cloud storage provider that you choose (for example, via the Android file picker), that provider's own privacy policy will apply to the stored file.
+          </p>
+        </div>
+        <div class="section">
+          <h3>6. Data Retention and Control</h3>
+          <ul>
+            <li>You can delete the app to remove locally stored app data from the device, subject to Android system behavior.</li>
+            <li>You control whether to create, keep, move, or delete exported JSON backup files.</li>
+            <li>You can reset progress within the app at any time.</li>
+          </ul>
+        </div>
+        <div class="section">
+          <h3>7. Children’s Privacy</h3>
+          <p>
+            The app is not specifically directed to children and does not knowingly collect personal information from children through developer-operated services.
+          </p>
+        </div>
+        <div class="section">
+          <h3>8. Changes to This Policy</h3>
+          <p>
+            This Privacy Policy may be updated from time to time. Updates will be published on this page with a revised effective date.
+          </p>
+        </div>
+        <div class="section">
+          <h3>9. Contact</h3>
+          <p>
+            If you have questions about this Privacy Policy, please contact the developer via the GitHub repository:<br>
+            <a href="https://github.com/Aitidi/zzz-achievement-tracker-android/issues">https://github.com/Aitidi/zzz-achievement-tracker-android/issues</a>
+          </p>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>中文</h2>
+        <div class="section">
+          <h3>1. 概述</h3>
+          <p>
+            ZZZ成就是一款用于追踪《绝区零》成就进度的离线 Android 应用。
+            本应用以本地存储为主，不要求用户注册或登录账号。
+          </p>
+        </div>
+        <div class="section">
+          <h3>2. 我们收集哪些信息</h3>
+          <p>我们<strong>不会</strong>通过自建服务器收集你的个人信息。</p>
+          <ul>
+            <li><strong>成就进度数据</strong>：用于在应用内显示你的完成情况，默认仅保存在你的设备本地。</li>
+            <li><strong>导入/导出文件</strong>：当你主动使用 JSON 备份导入或导出功能时，应用只会访问你在 Android 系统文件选择器中明确选择的文件。</li>
+            <li><strong>无账号信息</strong>：应用不要求注册账号，也不要求登录。</li>
+            <li><strong>无广告、无统计</strong>：应用不集成广告 SDK、统计分析 SDK，也不使用崩溃上报服务。</li>
+          </ul>
+        </div>
+        <div class="section">
+          <h3>3. 信息用途</h3>
+          <ul>
+            <li>用于在应用内展示你的成就进度。</li>
+            <li>在你主动请求时，用于导入或导出进度备份。</li>
+          </ul>
+        </div>
+        <div class="section">
+          <h3>4. 信息共享</h3>
+          <p>
+            我们不会出售、出租或向第三方共享你的数据。本应用不会将你的成就进度上传到开发者自有服务器。
+          </p>
+        </div>
+        <div class="section">
+          <h3>5. 设备存储与系统备份</h3>
+          <p>
+            你的进度数据默认保存在本地设备中。根据你的 Android 系统设置，应用数据也可能被纳入 Android 的系统备份机制，由你的设备或 Google 账号相关服务处理。该备份行为受 Android 平台控制，并非由本应用自建服务器执行。
+          </p>
+          <p>
+            如果你主动将导出的备份文件保存到你选择的云存储服务（例如通过 Android 文件选择器保存到某个云盘），则该文件后续受相应云服务提供商的隐私政策约束。
+          </p>
+        </div>
+        <div class="section">
+          <h3>6. 数据保留与控制</h3>
+          <ul>
+            <li>你可以通过卸载应用删除设备中的本地应用数据，但具体删除行为仍受 Android 系统机制影响。</li>
+            <li>你可以自行决定是否创建、保留、移动或删除导出的 JSON 备份文件。</li>
+            <li>你可以随时在应用内重置进度。</li>
+          </ul>
+        </div>
+        <div class="section">
+          <h3>7. 儿童隐私</h3>
+          <p>
+            本应用并非专门面向儿童，也不会通过开发者自有服务主动收集儿童个人信息。
+          </p>
+        </div>
+        <div class="section">
+          <h3>8. 政策更新</h3>
+          <p>
+            我们可能会不时更新本隐私权政策。更新后的版本会发布在本页面，并同步更新生效日期。
+          </p>
+        </div>
+        <div class="section">
+          <h3>9. 联系方式</h3>
+          <p>
+            如果你对本隐私权政策有任何问题，可以通过 GitHub 仓库联系开发者：<br>
+            <a href="https://github.com/Aitidi/zzz-achievement-tracker-android/issues">https://github.com/Aitidi/zzz-achievement-tracker-android/issues</a>
+          </p>
+        </div>
+      </section>
+    </div>
+
+    <hr class="divider">
+    <p class="footer muted">
+      Repository: <a href="https://github.com/Aitidi/zzz-achievement-tracker-android">https://github.com/Aitidi/zzz-achievement-tracker-android</a>
+    </p>
+  </main>
+</body>
+</html>

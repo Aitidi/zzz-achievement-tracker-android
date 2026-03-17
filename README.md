@@ -39,6 +39,7 @@
 - 所有进度默认保存在本地设备
 - 不上传服务器，不做账号绑定
 - 你可以随时导出 JSON 备份
+- 隐私权政策（公开页面）：https://aitidi.github.io/zzz-achievement-tracker-android/privacy-policy.html
 
 ---
 
