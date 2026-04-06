@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-03-05T23:39:09",
+  "generatedAt": "2026-04-04T11:58:44",
   "source": "ZZZ_全成就_完整清单.json",
-  "total": 662,
+  "total": 671,
   "versions": [
     {
       "version": "v1.0",
@@ -77,6 +77,11 @@
       "version": "v2.6",
       "file": "data/versions/v2.6.json",
       "total": 33
+    },
+    {
+      "version": "v2.7",
+      "file": "data/versions/v2.7.json",
+      "total": 9
     }
   ]
 }
