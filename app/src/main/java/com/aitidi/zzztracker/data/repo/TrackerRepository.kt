@@ -18,17 +18,17 @@ class TrackerRepository(private val context: Context, private val dao: Achieveme
     fun observeItems(): Flow<List<AchievementItem>> = dao.observeAll().map { it.map { e -> e.toModel() } }
 
     suspend fun ensureSeeded() {
-        if (dao.totalCount() > 0) return
-
         val fromVersionPacks = loadFromVersionPacks()
         if (fromVersionPacks.isNotEmpty()) {
-            dao.upsertAll(fromVersionPacks)
+            dao.insertMissing(fromVersionPacks)
             return
         }
 
+        if (dao.totalCount() > 0) return
+
         val text = context.assets.open("achievements_master.json").bufferedReader().use { it.readText() }
         val payload = json.decodeFromString(MasterPayload.serializer(), text)
-        dao.upsertAll(payload.items.map { it.toEntity() })
+        dao.insertMissing(payload.items.map { it.toEntity() })
     }
 
     suspend fun toggle(id: String, progress: Boolean) = dao.updateProgress(id, progress)

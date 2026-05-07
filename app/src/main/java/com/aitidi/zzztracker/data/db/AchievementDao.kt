@@ -14,6 +14,9 @@ interface AchievementDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(items: List<AchievementEntity>)
 
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertMissing(items: List<AchievementEntity>)
+
     @Query("UPDATE achievements SET progress = :progress WHERE id = :id")
     suspend fun updateProgress(id: String, progress: Boolean)
 
