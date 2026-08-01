@@ -10,14 +10,14 @@ plugins {
 
 android {
     namespace = "com.aitidi.zzztracker"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.aitidi.zzzachievementtracker"
         minSdk = 26
-        targetSdk = 35
-        versionCode = 103
-        versionName = "1.0.3"
+        targetSdk = 36
+        versionCode = 104
+        versionName = "1.0.4"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
     }
