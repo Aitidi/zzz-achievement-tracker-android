@@ -26,12 +26,15 @@ jobs:
       - name: Install Android SDK components
         run: |
           yes | sdkmanager --licenses
-          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+          sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: 8.10.2
+          gradle-version: 8.11.1
+
+      - name: Run unit tests and lint
+        run: gradle --no-daemon :app:testDebugUnitTest :app:lintDebug --stacktrace
 
       - name: Build Debug APK
         run: gradle --no-daemon :app:assembleDebug --stacktrace

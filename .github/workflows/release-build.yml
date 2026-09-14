@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-release-apk:
+  build-release:
     runs-on: ubuntu-latest
     env:
       ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -24,6 +24,8 @@ jobs:
       - uses: android-actions/setup-android@v3
 
       - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.11.1
 
       - name: Restore release keystore from secret
         if: env.ANDROID_KEYSTORE_BASE64 != ''
@@ -31,17 +33,19 @@ jobs:
           echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > release.keystore
           echo "ANDROID_KEYSTORE_PATH=$PWD/release.keystore" >> $GITHUB_ENV
 
-      - name: Build signed release APK (if signing secrets configured)
+      - name: Build signed release APK and AAB
         run: |
           yes | sdkmanager --licenses
-          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
-          gradle :app:assembleRelease --stacktrace
+          sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+          gradle --no-daemon :app:assembleRelease :app:bundleRelease --stacktrace
 
       - name: Normalize artifact file name
         run: |
           VERSION_NAME=$(grep -E 'versionName\s*=\s*"' app/build.gradle.kts | sed -E 's/.*"([^"]+)".*/\1/')
           VERSION_CODE=$(grep -E 'versionCode\s*=\s*[0-9]+' app/build.gradle.kts | sed -E 's/.*=\s*([0-9]+).*/\1/')
-          OUT="zzz-achievement-tracker-v${VERSION_NAME}+${VERSION_CODE}-release.apk"
+          RELEASE_NAME="zzz-achievement-tracker-v${VERSION_NAME}+${VERSION_CODE}-release"
+          APK_OUT="${RELEASE_NAME}.apk"
+          AAB_OUT="${RELEASE_NAME}.aab"
 
           APK_PATH=$(find app/build/outputs/apk/release -maxdepth 1 -type f -name "*.apk" ! -name "*unsigned*.apk" | head -n 1)
           if [ -z "$APK_PATH" ]; then
@@ -50,14 +54,23 @@ jobs:
             exit 1
           fi
 
-          cp "$APK_PATH" "$OUT"
-          echo "APK_NAME=$OUT" >> $GITHUB_ENV
+          AAB_PATH="app/build/outputs/bundle/release/app-release.aab"
+          if [ ! -f "$AAB_PATH" ]; then
+            echo "No signed release AAB produced at $AAB_PATH"
+            exit 1
+          fi
+
+          cp "$APK_PATH" "$APK_OUT"
+          cp "$AAB_PATH" "$AAB_OUT"
+          echo "RELEASE_NAME=$RELEASE_NAME" >> $GITHUB_ENV
+          echo "APK_NAME=$APK_OUT" >> $GITHUB_ENV
+          echo "AAB_NAME=$AAB_OUT" >> $GITHUB_ENV
 
       - name: Verify APK signature
         run: |
-          APKSIGNER="$ANDROID_SDK_ROOT/build-tools/35.0.0/apksigner"
+          APKSIGNER="$ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner"
           if [ ! -x "$APKSIGNER" ]; then
-            APKSIGNER="$ANDROID_HOME/build-tools/35.0.0/apksigner"
+            APKSIGNER="$ANDROID_HOME/build-tools/36.0.0/apksigner"
           fi
 
           if [ ! -x "$APKSIGNER" ]; then
@@ -67,7 +80,12 @@ jobs:
 
           "$APKSIGNER" verify --verbose "$APK_NAME"
 
+      - name: Verify AAB signature
+        run: jarsigner -verify "$AAB_NAME"
+
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.APK_NAME }}
-          path: ${{ env.APK_NAME }}
+          name: ${{ env.RELEASE_NAME }}
+          path: |
+            ${{ env.APK_NAME }}
+            ${{ env.AAB_NAME }}

@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -63,7 +62,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -82,7 +80,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.flow.collectLatest
 import com.aitidi.zzztracker.model.AchievementItem
-import com.aitidi.zzztracker.ui.theme.ThemeMode
 import com.aitidi.zzztracker.ui.theme.ZzzTrackerTheme
 import com.aitidi.zzztracker.viewmodel.SortMode
 import com.aitidi.zzztracker.viewmodel.TrackerUiState
@@ -123,78 +120,22 @@ private fun compareVersionText(a: String, b: String): Int {
     return a.compareTo(b, ignoreCase = true)
 }
 
-private data class ProtoColors(
-    val purple: Color,
-    val purpleSoft: Color,
-    val accent: Color,
-    val text: Color,
-    val muted: Color,
-    val border: Color,
-    val bg: Color,
-    val surface: Color,
-    val surfaceAlt: Color,
-    val surfaceSelected: Color,
-    val glow: Color,
-    val tabSelectedBg: Color,
-    val tabSelectedText: Color,
-    val checkDoneBg: Color,
-    val checkUndoneBg: Color,
-)
-
-private val DarkProto = ProtoColors(
-    purple = Color(0xFF896CFE),
-    purpleSoft = Color(0xFFB3A0FF),
-    accent = Color(0xFFE2F163),
-    text = Color(0xFFF2F2F2),
-    muted = Color(0xFFA6A6A6),
-    border = Color(0xFF3A3A3A),
-    bg = Color(0xFF1E1E1E),
-    surface = Color(0xFF232323),
-    surfaceAlt = Color(0xFF262626),
-    surfaceSelected = Color(0xFF2F3140),
-    glow = Color(0xFF3E2A7C),
-    tabSelectedBg = Color(0xFF2B2B2B),
-    tabSelectedText = Color(0xFFFFFFFF),
-    checkDoneBg = Color(0xFF3A315F),
-    checkUndoneBg = Color(0xFF2B2B2B),
-)
-
-private val LightProto = ProtoColors(
-    purple = Color(0xFF7C5BFF),
-    purpleSoft = Color(0xFF8A71FF),
-    accent = Color(0xFFD2E447),
-    text = Color(0xFF1C1C1E),
-    muted = Color(0xFF5F5F66),
-    border = Color(0xFFDADAE2),
-    bg = Color(0xFFF5F4FB),
-    surface = Color(0xFFFFFFFF),
-    surfaceAlt = Color(0xFFF8F7FC),
-    surfaceSelected = Color(0xFFEAE5FF),
-    glow = Color(0xFFEDE6FF),
-    tabSelectedBg = Color(0xFFEAE5FF),
-    tabSelectedText = Color(0xFF2F225F),
-    checkDoneBg = Color(0xFFDCD4FF),
-    checkUndoneBg = Color(0xFFF0EFF5),
-)
-
 private object ProtoPalette {
-    var current: ProtoColors = DarkProto
-
-    val Purple get() = current.purple
-    val PurpleSoft get() = current.purpleSoft
-    val Accent get() = current.accent
-    val Text get() = current.text
-    val Muted get() = current.muted
-    val Border get() = current.border
-    val Bg get() = current.bg
-    val Surface get() = current.surface
-    val SurfaceAlt get() = current.surfaceAlt
-    val SurfaceSelected get() = current.surfaceSelected
-    val Glow get() = current.glow
-    val TabSelectedBg get() = current.tabSelectedBg
-    val TabSelectedText get() = current.tabSelectedText
-    val CheckDoneBg get() = current.checkDoneBg
-    val CheckUndoneBg get() = current.checkUndoneBg
+    val Purple = Color(0xFF896CFE)
+    val PurpleSoft = Color(0xFFB3A0FF)
+    val Accent = Color(0xFFE2F163)
+    val Text = Color(0xFFF2F2F2)
+    val Muted = Color(0xFFA6A6A6)
+    val Border = Color(0xFF3A3A3A)
+    val Bg = Color(0xFF1E1E1E)
+    val Surface = Color(0xFF232323)
+    val SurfaceAlt = Color(0xFF262626)
+    val SurfaceSelected = Color(0xFF2F3140)
+    val Glow = Color(0xFF3E2A7C)
+    val TabSelectedBg = Color(0xFF2B2B2B)
+    val TabSelectedText = Color(0xFFFFFFFF)
+    val CheckDoneBg = Color(0xFF3A315F)
+    val CheckUndoneBg = Color(0xFF2B2B2B)
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -203,10 +144,8 @@ fun TrackerApp(vm: TrackerViewModel = viewModel()) {
     val ui by vm.ui.collectAsStateWithLifecycle()
     val allItems by vm.items.collectAsStateWithLifecycle()
     val versions = allItems.map { it.version }.distinct().sortedWith { a, b -> compareVersionText(b, a) }
-    val installedVersions = versions.filterNot { it in ui.disabledVersions }
     val categories = allItems
         .asSequence()
-        .filter { it.version !in ui.disabledVersions }
         .map { it.category }
         .distinct()
         .sorted()
@@ -234,13 +173,12 @@ fun TrackerApp(vm: TrackerViewModel = viewModel()) {
     val sortedFiltered by remember(allItems, ui) {
         derivedStateOf {
             val filtered = allItems.filter {
-                val installedOk = it.version !in ui.disabledVersions
                 val todoOk = !ui.onlyTodo || !it.progress
                 val q = ui.query.trim()
                 val qOk = q.isBlank() || it.name.contains(q, true) || it.description.contains(q, true) || it.category.contains(q, true)
                 val verOk = ui.selectedVersions.isEmpty() || it.version in ui.selectedVersions
                 val catOk = ui.selectedCategories.isEmpty() || it.category in ui.selectedCategories
-                installedOk && todoOk && qOk && verOk && catOk
+                todoOk && qOk && verOk && catOk
             }
 
             when (ui.sortMode) {
@@ -256,14 +194,7 @@ fun TrackerApp(vm: TrackerViewModel = viewModel()) {
         }
     }
 
-    val useDarkPalette = when (ui.themeMode) {
-        ThemeMode.SYSTEM -> isSystemInDarkTheme()
-        ThemeMode.LIGHT -> false
-        ThemeMode.DARK -> true
-    }
-    ProtoPalette.current = if (useDarkPalette) DarkProto else LightProto
-
-    ZzzTrackerTheme(mode = ui.themeMode) {
+    ZzzTrackerTheme {
         if (showFilterSheet) {
             ModalBottomSheet(
                 onDismissRequest = { showFilterSheet = false },
@@ -276,7 +207,7 @@ fun TrackerApp(vm: TrackerViewModel = viewModel()) {
                     Text("版本", style = MaterialTheme.typography.labelMedium, color = ProtoPalette.Muted)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         OptionChip(text = "全部", selected = ui.selectedVersions.isEmpty(), onClick = vm::clearVersionFilter)
-                        installedVersions.forEach { v ->
+                        versions.forEach { v ->
                             OptionChip(text = "版本 $v", selected = v in ui.selectedVersions, onClick = { vm.toggleVersion(v) })
                         }
                     }
@@ -338,7 +269,7 @@ fun TrackerApp(vm: TrackerViewModel = viewModel()) {
                     ui = ui,
                     allItems = allItems,
                     filtered = sortedFiltered,
-                    latestVersion = installedVersions.firstOrNull(),
+                    latestVersion = versions.firstOrNull(),
                     onOpenFilter = { showFilterSheet = true },
                     onOpenSort = { showSortSheet = true },
                     vm = vm,
@@ -346,15 +277,12 @@ fun TrackerApp(vm: TrackerViewModel = viewModel()) {
 
                 HomeTab.STATS -> StatsTab(
                     padding = padding,
-                    allItems = allItems.filter { it.version !in ui.disabledVersions },
+                    allItems = allItems,
                 )
 
                 HomeTab.SETTINGS -> SettingsTab(
                     padding = padding,
                     compactMode = ui.compactMode,
-                    versions = versions,
-                    disabledVersions = ui.disabledVersions,
-                    onToggleVersionInstalled = vm::toggleVersionInstalled,
                     onCompactModeChange = vm::setCompactMode,
                     onExport = { createExportLauncher.launch("zzz_progress_backup.json") },
                     onImport = { importLauncher.launch(arrayOf("application/json")) },
@@ -487,11 +415,11 @@ private fun ListTab(
         if (filtered.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
-                    text = if (ui.query.isNotBlank() || ui.selectedVersions.isNotEmpty() || ui.selectedCategories.isNotEmpty()) {
-                        "暂无结果，试试清空筛选"
-                    } else {
-                        "暂无成就数据或已全部隐藏"
-                    },
+                    text = ui.dataError ?: if (
+                        ui.query.isNotBlank() ||
+                        ui.selectedVersions.isNotEmpty() ||
+                        ui.selectedCategories.isNotEmpty()
+                    ) "暂无结果，试试清空筛选" else "暂无成就数据",
                     style = MaterialTheme.typography.bodyMedium,
                     color = ProtoPalette.Muted
                 )
@@ -597,15 +525,21 @@ private fun IconRectButton(
 
     Box(
         modifier = Modifier
-            .width(UiTokens.IconButtonWidth)
-            .height(UiTokens.ControlHeight)
-            .clip(shape)
-            .background(bg)
-            .border(1.dp, border, shape)
+            .size(48.dp)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        content()
+        Box(
+            modifier = Modifier
+                .width(UiTokens.IconButtonWidth)
+                .height(UiTokens.ControlHeight)
+                .clip(shape)
+                .background(bg)
+                .border(1.dp, border, shape),
+            contentAlignment = Alignment.Center
+        ) {
+            content()
+        }
     }
 }
 
@@ -662,7 +596,6 @@ private fun AchievementRow(
         modifier = Modifier
             .fillMaxWidth()
             .border(1.dp, ProtoPalette.Border, cardShape)
-            .alpha(if (item.progress) 0.72f else 1f)
     ) {
         Row(
             modifier = Modifier
@@ -700,15 +633,24 @@ private fun AchievementRow(
 
                 Box(
                     modifier = Modifier
-                        .size(24.dp)
-                        .clip(RoundedCornerShape(7.dp))
-                        .background(if (item.progress) ProtoPalette.CheckDoneBg else ProtoPalette.CheckUndoneBg)
-                        .border(1.dp, ProtoPalette.Border, RoundedCornerShape(7.dp))
-                        .alpha(if (lockProgressEditing) 0.4f else 1f)
+                        .size(48.dp)
                         .clickable(enabled = !lockProgressEditing) { onToggle(item, !item.progress) },
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(if (item.progress) "✓" else "", fontSize = 12.sp, color = ProtoPalette.Text)
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clip(RoundedCornerShape(7.dp))
+                            .background(if (item.progress) ProtoPalette.CheckDoneBg else ProtoPalette.CheckUndoneBg)
+                            .border(
+                                1.dp,
+                                if (lockProgressEditing) ProtoPalette.Muted else ProtoPalette.Border,
+                                RoundedCornerShape(7.dp)
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(if (item.progress) "✓" else "", fontSize = 12.sp, color = ProtoPalette.Text)
+                    }
                 }
             }
         }
@@ -819,14 +761,10 @@ private fun StatsTab(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun SettingsTab(
     padding: PaddingValues,
     compactMode: Boolean,
-    versions: List<String>,
-    disabledVersions: Set<String>,
-    onToggleVersionInstalled: (String) -> Unit,
     onCompactModeChange: (Boolean) -> Unit,
     onExport: () -> Unit,
     onImport: () -> Unit,
@@ -872,18 +810,6 @@ private fun SettingsTab(
             actionSelected = false,
             onActionClick = onReset
         )
-
-        Text("版本模块", color = ProtoPalette.Muted, style = MaterialTheme.typography.labelMedium)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            versions.forEach { version ->
-                val installed = version !in disabledVersions
-                OptionChip(
-                    text = if (installed) "$version 已安装" else "$version 已卸载",
-                    selected = installed,
-                    onClick = { onToggleVersionInstalled(version) }
-                )
-            }
-        }
     }
 }
 

@@ -8,7 +8,6 @@ import androidx.lifecycle.viewModelScope
 import com.aitidi.zzztracker.data.db.AppDatabase
 import com.aitidi.zzztracker.data.repo.TrackerRepository
 import com.aitidi.zzztracker.model.AchievementItem
-import com.aitidi.zzztracker.ui.theme.ThemeMode
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -30,11 +29,10 @@ data class TrackerUiState(
     val query: String = "",
     val selectedVersions: Set<String> = emptySet(),
     val selectedCategories: Set<String> = emptySet(),
-    val disabledVersions: Set<String> = emptySet(),
     val sortMode: SortMode = SortMode.VERSION_DESC,
     val lockProgressEditing: Boolean = false,
-    val themeMode: ThemeMode = ThemeMode.DARK,
     val compactMode: Boolean = true,
+    val dataError: String? = null,
 )
 
 class TrackerViewModel(app: Application) : AndroidViewModel(app) {
@@ -55,7 +53,14 @@ class TrackerViewModel(app: Application) : AndroidViewModel(app) {
     val events = _events.asSharedFlow()
 
     init {
-        viewModelScope.launch { repo.ensureSeeded() }
+        viewModelScope.launch {
+            runCatching { repo.ensureSeeded() }
+                .onFailure {
+                    _ui.value = _ui.value.copy(
+                        dataError = "成就数据加载失败：${it.message ?: "数据文件无效"}"
+                    )
+                }
+        }
     }
 
     fun setOnlyTodo(v: Boolean) = updateUi { copy(onlyTodo = v) }
@@ -81,23 +86,17 @@ class TrackerViewModel(app: Application) : AndroidViewModel(app) {
     fun setSortMode(v: SortMode) = updateUi { copy(sortMode = v) }
     fun toggleLockProgressEditing() = updateUi { copy(lockProgressEditing = !lockProgressEditing) }
 
-    fun setThemeMode(v: ThemeMode) = updateUi { copy(themeMode = v) }
     fun setCompactMode(v: Boolean) = updateUi { copy(compactMode = v) }
 
-    fun toggleVersionInstalled(version: String) {
-        val next = _ui.value.disabledVersions.toMutableSet().apply {
-            if (contains(version)) remove(version) else add(version)
-        }
-        updateUi {
-            copy(
-                disabledVersions = next,
-                selectedVersions = selectedVersions - next
-            )
-        }
-    }
-
     fun toggle(item: AchievementItem, checked: Boolean) {
-        viewModelScope.launch { repo.toggle(item.id, checked) }
+        if (_ui.value.lockProgressEditing) {
+            _events.tryEmit("已锁定，请先解锁勾选")
+            return
+        }
+        viewModelScope.launch {
+            repo.toggle(item.id, checked)
+            if (checked) _events.emit("已完成：${item.name}")
+        }
     }
 
     fun exportProgress(uri: Uri) {
@@ -109,6 +108,10 @@ class TrackerViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun importProgress(uri: Uri) {
+        if (_ui.value.lockProgressEditing) {
+            _events.tryEmit("已锁定，请先解锁后导入")
+            return
+        }
         viewModelScope.launch {
             runCatching { repo.importProgressFromUri(uri) }
                 .onSuccess { r -> _events.emit("导入完成：应用 ${r.applied}/${r.source} 条") }
@@ -117,6 +120,10 @@ class TrackerViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun requestResetProgress() {
+        if (_ui.value.lockProgressEditing) {
+            _events.tryEmit("已锁定，请先解锁后重置")
+            return
+        }
         if (resetInProgress) {
             _events.tryEmit("正在重置中，请稍候…")
             return
@@ -153,16 +160,6 @@ class TrackerViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun loadUiState(): TrackerUiState {
-        val migratedThemeV2 = prefs.getBoolean("themeMigratedV2", false)
-        val rawTheme = prefs.getString("themeMode", ThemeMode.DARK.name) ?: ThemeMode.DARK.name
-        val theme = when {
-            !migratedThemeV2 && rawTheme == ThemeMode.SYSTEM.name -> ThemeMode.DARK
-            else -> runCatching { ThemeMode.valueOf(rawTheme) }.getOrDefault(ThemeMode.DARK)
-        }
-        if (!migratedThemeV2) {
-            prefs.edit().putBoolean("themeMigratedV2", true).apply()
-        }
-
         val rawSort = prefs.getString("sortMode", SortMode.VERSION_DESC.name) ?: SortMode.VERSION_DESC.name
         val sort = when (rawSort) {
             "STATUS", "TODO_FIRST", "NAME" -> SortMode.VERSION_DESC // migration from old enum values
@@ -173,10 +170,8 @@ class TrackerViewModel(app: Application) : AndroidViewModel(app) {
             query = prefs.getString("query", "") ?: "",
             selectedVersions = decodeSet(prefs.getString("selectedVersions", "") ?: ""),
             selectedCategories = decodeSet(prefs.getString("selectedCategories", "") ?: ""),
-            disabledVersions = decodeSet(prefs.getString("disabledVersions", "") ?: ""),
             sortMode = sort,
             lockProgressEditing = prefs.getBoolean("lockProgressEditing", false),
-            themeMode = theme,
             compactMode = prefs.getBoolean("compactMode", true),
         )
     }
@@ -187,10 +182,8 @@ class TrackerViewModel(app: Application) : AndroidViewModel(app) {
             .putString("query", state.query)
             .putString("selectedVersions", encodeSet(state.selectedVersions))
             .putString("selectedCategories", encodeSet(state.selectedCategories))
-            .putString("disabledVersions", encodeSet(state.disabledVersions))
             .putString("sortMode", state.sortMode.name)
             .putBoolean("lockProgressEditing", state.lockProgressEditing)
-            .putString("themeMode", state.themeMode.name)
             .putBoolean("compactMode", state.compactMode)
             .apply()
     }

@@ -13,7 +13,3 @@ val ZzzBorder = Color(0xFF3A3A3A)
 val DarkBackground = Color(0xFF1E1E1E)
 val DarkSurface = Color(0xFF232323)
 val DarkCard = Color(0xFF262626)
-
-val LightBackground = Color(0xFFF4F1FF)
-val LightSurface = Color(0xFFFFFFFF)
-val LightCard = Color(0xFFFFFFFF)
