@@ -17,18 +17,27 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.FileDownload
@@ -67,6 +76,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextStyle
@@ -200,8 +210,12 @@ fun TrackerApp(vm: TrackerViewModel = viewModel()) {
                 onDismissRequest = { showFilterSheet = false },
                 containerColor = ProtoPalette.Surface,
                 contentColor = ProtoPalette.Text,
+                contentWindowInsets = { WindowInsets.safeDrawing },
             ) {
-                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()).padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
                     Text("筛选", style = MaterialTheme.typography.titleLarge, color = ProtoPalette.Text)
 
                     Text("版本", style = MaterialTheme.typography.labelMedium, color = ProtoPalette.Muted)
@@ -228,8 +242,12 @@ fun TrackerApp(vm: TrackerViewModel = viewModel()) {
                 onDismissRequest = { showSortSheet = false },
                 containerColor = ProtoPalette.Surface,
                 contentColor = ProtoPalette.Text,
+                contentWindowInsets = { WindowInsets.safeDrawing },
             ) {
-                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()).padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     Text("排序方式", style = MaterialTheme.typography.titleLarge, color = ProtoPalette.Text)
                     listOf(SortMode.VERSION_DESC, SortMode.VERSION_ASC).forEach { mode ->
                         OptionRow(
@@ -248,6 +266,7 @@ fun TrackerApp(vm: TrackerViewModel = viewModel()) {
         Scaffold(
             modifier = Modifier
                 .fillMaxSize()
+                .imePadding()
                 .background(
                     brush = Brush.radialGradient(
                         colors = listOf(ProtoPalette.Glow, ProtoPalette.Bg),
@@ -255,6 +274,7 @@ fun TrackerApp(vm: TrackerViewModel = viewModel()) {
                 ),
             containerColor = Color.Transparent,
             contentColor = ProtoPalette.Text,
+            contentWindowInsets = WindowInsets.safeDrawing,
             snackbarHost = { SnackbarHost(snackbar) },
             bottomBar = {
                 BottomTabBar(
@@ -306,6 +326,7 @@ private fun ListTab(
     vm: TrackerViewModel,
 ) {
     val done = allItems.count { it.progress }
+    val compactHeight = LocalConfiguration.current.screenHeightDp < 480
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val searchInteraction = remember { MutableInteractionSource() }
@@ -321,11 +342,18 @@ private fun ListTab(
     Column(
         modifier = Modifier
             .padding(padding)
+            .consumeWindowInsets(padding)
             .fillMaxSize()
             .padding(horizontal = 14.dp, vertical = 10.dp)
     ) {
-        ScreenTitle(title = "成就", badge = latestVersion)
-        SummaryCard(done = done, total = allItems.size)
+        ScreenTitle(
+            title = "成就",
+            badge = latestVersion,
+            trailingText = if (compactHeight) "$done/${allItems.size}" else null
+        )
+        if (!compactHeight) {
+            SummaryCard(done = done, total = allItems.size)
+        }
 
         Row(
             modifier = Modifier
@@ -453,7 +481,7 @@ private fun normalizeVersion(version: String): String {
 }
 
 @Composable
-private fun ScreenTitle(title: String, badge: String? = null) {
+private fun ScreenTitle(title: String, badge: String? = null, trailingText: String? = null) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -472,6 +500,15 @@ private fun ScreenTitle(title: String, badge: String? = null) {
             ) {
                 Text(text = normalizeVersion(badge), style = MaterialTheme.typography.labelSmall, color = ProtoPalette.PurpleSoft)
             }
+        }
+        if (trailingText != null) {
+            Spacer(modifier = Modifier.weight(1f))
+            Text(
+                text = trailingText,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = ProtoPalette.Text
+            )
         }
     }
 }
@@ -692,6 +729,7 @@ private fun StatsTab(
     Column(
         modifier = Modifier
             .padding(padding)
+            .consumeWindowInsets(padding)
             .fillMaxSize()
             .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -773,7 +811,9 @@ private fun SettingsTab(
     Column(
         modifier = Modifier
             .padding(padding)
+            .consumeWindowInsets(padding)
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
@@ -849,7 +889,7 @@ private fun BottomTabBar(selected: HomeTab, onSelect: (HomeTab) -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .navigationBarsPadding()
+            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
             .padding(horizontal = 12.dp, vertical = 14.dp)
             .clip(RoundedCornerShape(16.dp))
             .background(ProtoPalette.Surface)

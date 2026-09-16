@@ -21,11 +21,14 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - uses: android-actions/setup-android@v3
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-36 build-tools;36.0.0'
 
       - uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: 8.11.1
+          gradle-version: 9.1.0
 
       - name: Restore release keystore from secret
         if: env.ANDROID_KEYSTORE_BASE64 != ''
@@ -34,10 +37,28 @@ jobs:
           echo "ANDROID_KEYSTORE_PATH=$PWD/release.keystore" >> $GITHUB_ENV
 
       - name: Build signed release APK and AAB
+        run: gradle --no-daemon :app:assembleRelease :app:bundleRelease --stacktrace
+
+      - name: Verify R8 optimizations in release bundle
         run: |
-          yes | sdkmanager --licenses
-          sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
-          gradle --no-daemon :app:assembleRelease :app:bundleRelease --stacktrace
+          python3 - <<'PY'
+          import json
+          import zipfile
+
+          with zipfile.ZipFile("app/build/outputs/bundle/release/app-release.aab") as bundle:
+              metadata = json.loads(bundle.read("BUNDLE-METADATA/com.android.tools/r8.json"))
+              options = metadata["options"]
+              for setting in ("isShrinkingEnabled", "isOptimizationsEnabled", "isObfuscationEnabled"):
+                  if options.get(setting) is not True:
+                      raise SystemExit(f"R8 optimization is disabled: {setting}")
+              if options.get("isProGuardCompatibilityModeEnabled") is not False:
+                  raise SystemExit("R8 full mode is disabled")
+              if metadata["resourceOptimization"].get("isOptimizedShrinkingEnabled") is not True:
+                  raise SystemExit("R8 optimized resource shrinking is disabled")
+              if not bundle.read("BUNDLE-METADATA/com.android.tools.build.obfuscation/proguard.map"):
+                  raise SystemExit("R8 mapping is missing from the release bundle")
+          print("R8 full mode, code optimization and optimized resource shrinking verified")
+          PY
 
       - name: Normalize artifact file name
         run: |
