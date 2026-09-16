@@ -56,6 +56,11 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Keep the UI preview install separate from the user's release progress.
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-ui-preview"
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true

@@ -28,8 +28,8 @@ class MainActivity : ComponentActivity() {
         }
         // Android 9/10 retain the default cutout mode rather than deprecated SHORT_EDGES.
         WindowCompat.getInsetsController(window, window.decorView).apply {
-            isAppearanceLightStatusBars = false
-            isAppearanceLightNavigationBars = false
+            isAppearanceLightStatusBars = true
+            isAppearanceLightNavigationBars = true
         }
     }
 }
