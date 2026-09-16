@@ -10,12 +10,16 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
+import com.aitidi.zzztracker.model.AchievementCategories
 import com.aitidi.zzztracker.ui.theme.AppColors
 import com.aitidi.zzztracker.viewmodel.SortMode
 import com.aitidi.zzztracker.viewmodel.TrackerUiState
@@ -24,7 +28,7 @@ import com.aitidi.zzztracker.viewmodel.TrackerViewModel
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 internal fun FilterSheet(ui: TrackerUiState, versions: List<String>, categories: List<String>, vm: TrackerViewModel, onDismiss: () -> Unit) {
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+    ModalBottomSheet(onDismissRequest = onDismiss, modifier = Modifier.fillMaxHeight(0.94f), sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = AppColors.Background, contentWindowInsets = { WindowInsets.safeDrawing }, shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)) {
         Column(Modifier.padding(horizontal = PageGutter).padding(bottom = 16.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -38,12 +42,50 @@ internal fun FilterSheet(ui: TrackerUiState, versions: List<String>, categories:
                     FilterOption("全部", ui.selectedVersions.isEmpty(), vm::clearVersionFilter)
                     versions.forEach { version -> FilterOption(versionLabel(version), version in ui.selectedVersions) { vm.toggleVersion(version) } }
                 }
-                SectionLabel("分类")
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterOption("全部", ui.selectedCategories.isEmpty(), vm::clearCategoryFilter)
-                    categories.forEach { category -> FilterOption(category, category in ui.selectedCategories) { vm.toggleCategory(category) } }
-                }
+                CategoryFilters(categories, ui.selectedCategories, vm::toggleCategory, vm::clearCategoryFilter)
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+internal fun CategoryFilters(categories: List<String>, selected: Set<String>, onToggle: (String) -> Unit, onClear: () -> Unit) {
+    val groups = AchievementCategories.groups
+    var activeGroup by rememberSaveable {
+        mutableStateOf(groups.firstOrNull { group -> group.categories.any { it in selected } }?.title ?: groups.first().title)
+    }
+    Row(Modifier.fillMaxWidth().padding(top = 20.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text("分类", Modifier.weight(1f).padding(start = 4.dp), style = MaterialTheme.typography.titleSmall, color = AppColors.Secondary)
+        FilterOption("全部分类", selected.isEmpty(), onClear)
+    }
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(AppColors.Control).padding(3.dp).selectableGroup()) {
+        groups.forEach { group ->
+            val selectedCount = group.categories.count { it in selected }
+            val active = group.title == activeGroup
+            Row(Modifier.weight(1f).clip(RoundedCornerShape(9.dp))
+                .background(if (active) AppColors.Surface else androidx.compose.ui.graphics.Color.Transparent)
+                .selectable(active, role = Role.Tab, onClick = { activeGroup = group.title })
+                .semantics { stateDescription = "已选 $selectedCount 个分类" }
+                .heightIn(min = 48.dp).padding(horizontal = 4.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                Text(group.title, style = MaterialTheme.typography.labelLarge, color = if (active) AppColors.Text else AppColors.Secondary)
+                if (selectedCount > 0) Text(" $selectedCount", style = MaterialTheme.typography.labelSmall, color = AppColors.Blue)
+            }
+        }
+    }
+    FlowRow(Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        groups.first { it.title == activeGroup }.categories.filter { it in categories }.forEach { category ->
+            FilterOption(category, category in selected) { onToggle(category) }
+        }
+    }
+    // Do not make future catalog additions inaccessible before their group is assigned.
+    val known = groups.flatMap { it.categories }.toSet()
+    val ungrouped = categories.filterNot { it in known }
+    if (ungrouped.isNotEmpty()) {
+        SectionLabel("其他分类")
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            ungrouped.forEach { category -> FilterOption(category, category in selected) { onToggle(category) } }
         }
     }
 }

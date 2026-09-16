@@ -5,6 +5,7 @@ import android.net.Uri
 import com.aitidi.zzztracker.data.db.AchievementDao
 import com.aitidi.zzztracker.data.db.AchievementEntity
 import com.aitidi.zzztracker.model.AchievementItem
+import com.aitidi.zzztracker.model.AchievementCategories
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -59,15 +60,16 @@ class TrackerRepository(private val context: Context, private val dao: Achieveme
         return items
     }
 
-    private fun RawItem.toEntity(): AchievementEntity {
-        val n = 成就名 ?: name ?: ""
-        val d = 描述 ?: description ?: ""
-        val v = 版本 ?: version ?: "unknown"
-        val c = 分类 ?: category ?: "未分类"
-        val resolvedId = id ?: stableAchievementId(n, v, c)
-        return AchievementEntity(resolvedId, n, d, v, c, false)
-    }
+}
 
+internal fun RawItem.toEntity(): AchievementEntity {
+    val n = 成就名 ?: name ?: ""
+    val d = 描述 ?: description ?: ""
+    val v = 版本 ?: version ?: "unknown"
+    val originalCategory = 分类 ?: category ?: "未分类"
+    // Resolve legacy identity BEFORE normalizing the category. Old JSON backups store this ID.
+    val resolvedId = id ?: stableAchievementId(n, v, originalCategory)
+    return AchievementEntity(resolvedId, n, d, v, AchievementCategories.canonical(originalCategory), false)
 }
 
 internal fun stableAchievementId(name: String, version: String, category: String): String {
@@ -75,7 +77,7 @@ internal fun stableAchievementId(name: String, version: String, category: String
     return hash.joinToString("") { "%02x".format(it) }
 }
 
-private fun AchievementEntity.toModel() = AchievementItem(id, name, description, version, category, progress)
+private fun AchievementEntity.toModel() = AchievementItem(id, name, description, version, AchievementCategories.canonical(category), progress)
 
 data class ImportResult(val applied: Int, val source: Int)
 

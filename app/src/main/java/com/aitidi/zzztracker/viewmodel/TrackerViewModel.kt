@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.aitidi.zzztracker.data.db.AppDatabase
 import com.aitidi.zzztracker.data.repo.TrackerRepository
 import com.aitidi.zzztracker.model.AchievementItem
+import com.aitidi.zzztracker.model.AchievementCategories
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -74,8 +75,9 @@ class TrackerViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun toggleCategory(v: String) {
+        val category = AchievementCategories.canonical(v)
         val next = _ui.value.selectedCategories.toMutableSet().apply {
-            if (contains(v)) remove(v) else add(v)
+            if (contains(category)) remove(category) else add(category)
         }
         updateUi { copy(selectedCategories = next) }
     }
@@ -169,7 +171,7 @@ class TrackerViewModel(app: Application) : AndroidViewModel(app) {
             onlyTodo = prefs.getBoolean("onlyTodo", true),
             query = prefs.getString("query", "") ?: "",
             selectedVersions = decodeSet(prefs.getString("selectedVersions", "") ?: ""),
-            selectedCategories = decodeSet(prefs.getString("selectedCategories", "") ?: ""),
+            selectedCategories = loadCategorySelection(prefs),
             sortMode = sort,
             lockProgressEditing = prefs.getBoolean("lockProgressEditing", false),
             compactMode = prefs.getBoolean("compactMode", true),
