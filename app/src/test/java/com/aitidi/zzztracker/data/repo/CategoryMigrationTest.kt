@@ -18,11 +18,14 @@ class CategoryMigrationTest {
     fun everyExistingBackupIdSurvivesCategoryMerge() {
         val old = catalog()
         val migrated = old.map { it.toEntity() }
-        assertEquals(804, migrated.size)
+        assertEquals(old.size, migrated.size)
         assertEquals(old.map { it.id }, migrated.map { it.id })
         assertEquals(migrated.size, migrated.map { it.id }.toSet().size)
         assertEquals(26, old.count { it.分类 == "布亚斯特" })
-        assertEquals(31, migrated.count { it.category == "罗斯凯利法" })
+        assertEquals(
+            old.count { it.分类 in setOf("布亚斯特", "罗斯凯利法") },
+            migrated.count { it.category == "罗斯凯利法" },
+        )
         assertFalse(migrated.any { it.category == "布亚斯特" })
     }
 

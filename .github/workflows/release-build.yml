@@ -107,6 +107,4 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ env.RELEASE_NAME }}
-          path: |
-            ${{ env.APK_NAME }}
-            ${{ env.AAB_NAME }}
+          path: ${{ env.APK_NAME }}
