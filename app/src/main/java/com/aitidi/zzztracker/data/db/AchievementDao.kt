@@ -18,6 +18,15 @@ interface AchievementDao {
     @Query("UPDATE achievements SET progress = :progress WHERE id = :id")
     suspend fun updateProgress(id: String, progress: Boolean)
 
+    @Query("UPDATE achievements SET progress = :progress WHERE id IN (:ids)")
+    suspend fun updateProgressBatch(ids: List<String>, progress: Boolean)
+
+    /** Batched so large selections stay under SQLite's bound-variable limit. */
+    @Transaction
+    suspend fun setProgress(ids: List<String>, progress: Boolean) {
+        ids.chunked(500).forEach { updateProgressBatch(it, progress) }
+    }
+
     @Query("UPDATE achievements SET progress = 0")
     suspend fun resetAllProgress()
 

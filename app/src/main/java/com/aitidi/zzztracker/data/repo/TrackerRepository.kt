@@ -24,6 +24,8 @@ class TrackerRepository(private val context: Context, private val dao: Achieveme
 
     suspend fun toggle(id: String, progress: Boolean) = dao.updateProgress(id, progress)
 
+    suspend fun setProgress(ids: List<String>, progress: Boolean) = dao.setProgress(ids, progress)
+
     suspend fun resetAllProgress() = dao.resetAllProgress()
 
     suspend fun exportProgressToUri(uri: Uri): Int {

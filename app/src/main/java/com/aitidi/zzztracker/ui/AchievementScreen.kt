@@ -1,25 +1,24 @@
 package com.aitidi.zzztracker.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Sort
 import androidx.compose.material.icons.outlined.*
@@ -28,231 +27,324 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.semantics.*
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.aitidi.zzztracker.model.AchievementCategories
 import com.aitidi.zzztracker.model.AchievementItem
 import com.aitidi.zzztracker.ui.theme.AppColors
+import com.aitidi.zzztracker.ui.theme.numberStyle
+import com.aitidi.zzztracker.viewmodel.GroupMode
+import com.aitidi.zzztracker.viewmodel.SortMode
+import com.aitidi.zzztracker.viewmodel.StatusFilter
 import com.aitidi.zzztracker.viewmodel.TrackerUiState
 import com.aitidi.zzztracker.viewmodel.TrackerViewModel
 
+private val categoryOrder = AchievementCategories.groups.flatMap { it.categories }
+
+/** Groups the filtered list into version or category sections, in display order. */
+internal fun sectionsOf(filtered: List<AchievementItem>, groupMode: GroupMode, sortMode: SortMode): List<Pair<String, List<AchievementItem>>> =
+    when (groupMode) {
+        GroupMode.VERSION -> filtered.groupBy { it.version }.toList().sortedWith { a, b ->
+            if (sortMode == SortMode.VERSION_DESC) compareVersionText(b.first, a.first) else compareVersionText(a.first, b.first)
+        }
+        GroupMode.CATEGORY -> filtered.groupBy { it.category }.toList().sortedWith(
+            compareBy<Pair<String, List<AchievementItem>>> { categoryOrder.indexOf(it.first).let { i -> if (i < 0) Int.MAX_VALUE else i } }.thenBy { it.first })
+    }
+
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun AchievementScreen(
     ui: TrackerUiState,
     allItems: List<AchievementItem>,
     filtered: List<AchievementItem>,
-    latestVersion: String?,
     vm: TrackerViewModel,
+    selection: Set<String>?,
+    onSelectionChange: (Set<String>?) -> Unit,
     onFilter: () -> Unit,
-    onSort: () -> Unit,
 ) {
-    val done = allItems.count { it.progress }
     val focus = LocalFocusManager.current
-    val searchInteraction = remember { MutableInteractionSource() }
-    val searchFocused by searchInteraction.collectIsFocusedAsState()
-    val shortWindow = LocalConfiguration.current.screenHeightDp < 680
-    BackHandler(searchFocused) { focus.clearFocus() }
-    var detailId by rememberSaveable { mutableStateOf<String?>(null) }
-    val detail = allItems.firstOrNull { it.id == detailId }
-    val hasFilters = ui.selectedVersions.isNotEmpty() || ui.selectedCategories.isNotEmpty()
+    var searching by rememberSaveable { mutableStateOf(ui.query.isNotEmpty()) }
+    var menuOpen by remember { mutableStateOf(false) }
+    var expandedId by rememberSaveable { mutableStateOf<String?>(null) }
+    var collapsed by remember { mutableStateOf(emptySet<String>()) }
+    val closeSearch = { searching = false; vm.setQuery(""); focus.clearFocus() }
+    BackHandler(searching && selection == null) { closeSearch() }
+
+    val sections = remember(filtered, ui.groupMode, ui.sortMode) { sectionsOf(filtered, ui.groupMode, ui.sortMode) }
+    val sectionTally = remember(allItems, ui.groupMode) {
+        allItems.groupBy { if (ui.groupMode == GroupMode.VERSION) it.version else it.category }.mapValues { it.value.tally() }
+    }
+    val total = remember(allItems) { allItems.tally() }
+    val filterCount = ui.selectedVersions.size + ui.selectedCategories.size
     val listState = rememberLazyListState()
-    // Keep search controls visible when result sets change; header scrolls away on small screens.
-    LaunchedEffect(ui.query, ui.onlyTodo, ui.selectedVersions, ui.selectedCategories, ui.sortMode) {
+    LaunchedEffect(ui.query, ui.status, ui.selectedVersions, ui.selectedCategories, ui.sortMode, ui.groupMode) {
         listState.scrollToItem(0)
     }
-    if (detail != null) {
-        AlertDialog(
-            onDismissRequest = { detailId = null },
-            title = { Text(detail.name) },
-            text = { Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text("${versionLabel(detail.version)} · ${detail.category}", color = AppColors.Secondary)
-                Text(detail.description, style = MaterialTheme.typography.bodyLarge)
-                if (ui.lockProgressEditing) Text("进度已锁定，请先在成就页解锁。", color = AppColors.Secondary)
-            } },
-            confirmButton = { TextButton(enabled = !ui.lockProgressEditing, onClick = { vm.toggle(detail, !detail.progress); detailId = null }) {
-                Text(if (detail.progress) "标为未完成" else "标为已完成")
-            } },
-            dismissButton = { TextButton(onClick = { detailId = null }) { Text("关闭") } },
-            containerColor = AppColors.Surface,
-        )
-    }
-    LazyColumn(
-        state = listState,
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = PageGutter, end = PageGutter, bottom = 24.dp),
-    ) {
-        item(key = "header") {
-            if (!searchFocused && !shortWindow) {
-                PageTitle("成就", "绝区零" + (latestVersion?.let { " · ${versionLabel(it)}" } ?: "")) {
-                    IconButton(onClick = vm::toggleLockProgressEditing) {
-                        Icon(if (ui.lockProgressEditing) Icons.Outlined.Lock else Icons.Outlined.LockOpen,
-                            contentDescription = if (ui.lockProgressEditing) "解锁进度编辑" else "锁定进度编辑", tint = AppColors.Blue)
-                    }
-                }
-                SummaryCard(done, allItems.size)
-            } else if (!searchFocused) {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text("成就", Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
-                    Text("${countLabel(done)} / ${countLabel(allItems.size)}", color = AppColors.Secondary)
-                    IconButton(onClick = vm::toggleLockProgressEditing) {
-                        Icon(if (ui.lockProgressEditing) Icons.Outlined.Lock else Icons.Outlined.LockOpen,
-                            contentDescription = if (ui.lockProgressEditing) "解锁进度编辑" else "锁定进度编辑", tint = AppColors.Blue)
-                    }
-                }
-            }
-            val search: @Composable (Modifier) -> Unit = { modifier ->
-                SearchBar(ui.query, vm::setQuery, searchInteraction, searchFocused, { focus.clearFocus() }, modifier)
-            }
-            if (LocalConfiguration.current.screenWidthDp > 500) {
-                Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    search(Modifier.weight(1f))
-                    TodoSegments(ui.onlyTodo, vm::setOnlyTodo, Modifier.weight(0.7f))
-                }
+
+    Column(Modifier.fillMaxSize()) {
+        Column(Modifier.padding(horizontal = PageGutter).padding(top = 8.dp, bottom = 4.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            if (searching) {
+                SearchField(ui.query, vm::setQuery, onCancel = closeSearch, onDone = { focus.clearFocus() })
             } else {
-                search(Modifier.padding(top = 14.dp))
-                TodoSegments(ui.onlyTodo, vm::setOnlyTodo, Modifier.padding(top = 14.dp))
-            }
-            Row(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("${countLabel(filtered.size)} 项成就", Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = AppColors.Secondary)
-                TextButton(onClick = onFilter, contentPadding = PaddingValues(horizontal = 8.dp)) {
-                    Icon(Icons.Outlined.FilterAlt, null, Modifier.size(18.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text(if (hasFilters) "筛选 ${ui.selectedVersions.size + ui.selectedCategories.size}" else "筛选")
+                Row(Modifier.fillMaxWidth().heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text("成就", Modifier.weight(1f), style = MaterialTheme.typography.headlineLarge)
+                    Text("${countLabel(total.done)}/${countLabel(total.total)}", Modifier.padding(end = 4.dp), style = numberStyle(16), color = AppColors.Secondary)
+                    IconButton(onClick = { searching = true }) { Icon(Icons.Outlined.Search, "搜索成就", tint = AppColors.Text) }
+                    Box {
+                        IconButton(onClick = { menuOpen = true }) {
+                            Icon(if (ui.lockProgressEditing) Icons.Outlined.Lock else Icons.Outlined.MoreVert, "更多操作",
+                                tint = if (ui.lockProgressEditing) AppColors.AccentText else AppColors.Text)
+                        }
+                        DropdownMenu(menuOpen, onDismissRequest = { menuOpen = false }, containerColor = AppColors.Surface) {
+                            DropdownMenuItem(text = { Text("多选") }, leadingIcon = { Icon(Icons.Outlined.Checklist, null) },
+                                onClick = { menuOpen = false; expandedId = null; onSelectionChange(emptySet()) })
+                            DropdownMenuItem(text = { Text(if (ui.lockProgressEditing) "解锁进度编辑" else "锁定进度编辑") },
+                                leadingIcon = { Icon(if (ui.lockProgressEditing) Icons.Outlined.LockOpen else Icons.Outlined.Lock, null) },
+                                onClick = { menuOpen = false; vm.toggleLockProgressEditing() })
+                            DropdownMenuItem(text = { Text("版本排序：${ui.sortMode.label}") }, leadingIcon = { Icon(Icons.AutoMirrored.Outlined.Sort, null) },
+                                onClick = {
+                                    menuOpen = false
+                                    vm.setSortMode(if (ui.sortMode == SortMode.VERSION_DESC) SortMode.VERSION_ASC else SortMode.VERSION_DESC)
+                                })
+                        }
+                    }
                 }
-                TextButton(onClick = onSort, contentPadding = PaddingValues(start = 8.dp)) {
-                    Icon(Icons.AutoMirrored.Outlined.Sort, null, Modifier.size(18.dp))
-                    Spacer(Modifier.width(4.dp)); Text("排序")
+            }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                SegmentedControl(StatusFilter.entries, ui.status, { it.label }, vm::setStatus, Modifier.weight(1f))
+                val active = filterCount > 0
+                Row(Modifier.heightIn(min = 42.dp).clip(RoundedCornerShape(11.dp)).background(if (active) AppColors.Accent else AppColors.Control)
+                    .clickable(role = Role.Button, onClick = { focus.clearFocus(); onFilter() }).padding(horizontal = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Outlined.FilterList, null, Modifier.size(18.dp), tint = if (active) AppColors.OnAccent else AppColors.Text)
+                    Text(if (active) " 筛选 $filterCount" else " 筛选", style = MaterialTheme.typography.labelLarge,
+                        color = if (active) AppColors.OnAccent else AppColors.Text)
                 }
             }
-            if (ui.lockProgressEditing) Text("进度已锁定，点按右上角解锁", Modifier.padding(bottom = 12.dp), color = AppColors.Secondary, style = MaterialTheme.typography.bodySmall)
-            if (hasFilters) Row(Modifier.padding(bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text((ui.selectedVersions.sorted().map(::versionLabel) + ui.selectedCategories.sorted()).joinToString(" · "),
-                    Modifier.weight(1f), color = AppColors.Blue, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                TextButton(onClick = { vm.clearVersionFilter(); vm.clearCategoryFilter() }) { Text("清除") }
+            if (filterCount > 0) ActiveFilterChips(ui, vm)
+            if (ui.lockProgressEditing) {
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(AppColors.AccentSoft).padding(start = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Outlined.Lock, null, Modifier.size(16.dp), tint = AppColors.AccentText)
+                    Text("进度已锁定，勾选暂不可用", Modifier.weight(1f).padding(start = 6.dp), style = MaterialTheme.typography.bodySmall, color = AppColors.AccentText)
+                    TextButton(onClick = vm::toggleLockProgressEditing) { Text("解锁", color = AppColors.AccentText) }
+                }
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("${countLabel(filtered.size)} 项", Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = AppColors.Secondary)
+                Text("按 ", style = MaterialTheme.typography.bodySmall, color = AppColors.Secondary)
+                SegmentedControl(GroupMode.entries, ui.groupMode, { it.label }, vm::setGroupMode, Modifier.width(132.dp))
             }
         }
         if (filtered.isEmpty()) {
-            item(key = "empty") {
-                Column(Modifier.fillMaxWidth().padding(vertical = 44.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Outlined.SearchOff, null, Modifier.size(40.dp), tint = AppColors.Secondary)
-                    Text(ui.dataError ?: if (allItems.isNotEmpty() && ui.onlyTodo && !hasFilters && ui.query.isBlank()) "全部完成，真棒！" else "没有找到成就",
-                        Modifier.padding(top = 16.dp), style = MaterialTheme.typography.titleMedium)
-                    Text(if (ui.dataError != null) "请重新打开应用后重试" else "试试其他关键词，或查看全部成就", Modifier.padding(top = 6.dp),
-                        style = MaterialTheme.typography.bodyMedium, color = AppColors.Secondary)
-                    if (ui.query.isNotBlank() || hasFilters || ui.onlyTodo) TextButton(onClick = {
-                        vm.setQuery(""); vm.clearVersionFilter(); vm.clearCategoryFilter(); vm.setOnlyTodo(false)
-                    }) { Text("查看全部") }
+            EmptyState(ui, allItems.isNotEmpty(), filterCount > 0, onShowAll = { searching = false; vm.showEverything() })
+            return@Column
+        }
+        LazyColumn(state = listState, modifier = Modifier.weight(1f).fillMaxWidth(),
+            contentPadding = PaddingValues(start = PageGutter, end = PageGutter, bottom = 24.dp)) {
+            sections.forEach { (key, rows) ->
+                val isCollapsed = key in collapsed
+                stickyHeader(key = "section:$key", contentType = "header") {
+                    SectionHeader(
+                        title = if (ui.groupMode == GroupMode.VERSION) versionLabel(key) else key,
+                        isVersion = ui.groupMode == GroupMode.VERSION,
+                        tally = sectionTally[key] ?: rows.tally(),
+                        collapsed = isCollapsed,
+                        onToggle = { collapsed = if (isCollapsed) collapsed - key else collapsed + key },
+                    )
                 }
-            }
-        } else {
-            itemsIndexed(filtered, key = { _, item -> item.id }, contentType = { _, _ -> "achievement" }) { index, item ->
-                val shape = RoundedCornerShape(topStart = if (index == 0) 20.dp else 0.dp, topEnd = if (index == 0) 20.dp else 0.dp,
-                    bottomStart = if (index == filtered.lastIndex) 20.dp else 0.dp, bottomEnd = if (index == filtered.lastIndex) 20.dp else 0.dp)
-                Column(Modifier.clip(shape).background(AppColors.Surface)) {
-                    AchievementRow(item, ui.compactMode, ui.lockProgressEditing, onToggle = { vm.toggle(item, !item.progress) },
-                        onDetail = { focus.clearFocus(); detailId = item.id })
-                    if (index < filtered.lastIndex) GroupDivider(60)
+                if (!isCollapsed) itemsIndexed(rows, key = { _, item -> item.id }, contentType = { _, _ -> "achievement" }) { index, item ->
+                    val shape = RoundedCornerShape(
+                        topStart = if (index == 0) 16.dp else 0.dp, topEnd = if (index == 0) 16.dp else 0.dp,
+                        bottomStart = if (index == rows.lastIndex) 16.dp else 0.dp, bottomEnd = if (index == rows.lastIndex) 16.dp else 0.dp)
+                    Column(Modifier.animateItem().clip(shape).background(AppColors.Surface)) {
+                        AchievementRow(
+                            item = item,
+                            meta = if (ui.groupMode == GroupMode.VERSION) item.category else versionLabel(item.version),
+                            compact = ui.compactMode,
+                            locked = ui.lockProgressEditing,
+                            expanded = expandedId == item.id,
+                            selecting = selection != null,
+                            selected = selection?.contains(item.id) == true,
+                            onToggle = { vm.toggle(item, !item.progress) },
+                            onClick = {
+                                focus.clearFocus()
+                                if (selection != null) onSelectionChange(if (item.id in selection) selection - item.id else selection + item.id)
+                                else expandedId = if (expandedId == item.id) null else item.id
+                            },
+                            onLongClick = {
+                                focus.clearFocus()
+                                expandedId = null
+                                onSelectionChange((selection ?: emptySet()) + item.id)
+                            },
+                        )
+                        if (index < rows.lastIndex) GroupDivider(if (selection != null) 46.dp else 14.dp)
+                    }
                 }
+                item(key = "gap:$key", contentType = "gap") { Spacer(Modifier.height(8.dp)) }
             }
         }
     }
 }
 
 @Composable
-private fun SummaryCard(done: Int, total: Int) {
-    val progress = if (total == 0) 0f else done.toFloat() / total
-    Column(Modifier.fillMaxWidth().clip(GroupShape).background(AppColors.Surface).padding(20.dp)) {
-        Text("总进度", style = MaterialTheme.typography.bodyMedium)
-        Row(Modifier.fillMaxWidth().padding(top = 3.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("${countLabel(done)} / ${countLabel(total)}", Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
-            Text("${(progress * 100).toInt()}%", color = AppColors.Secondary, style = MaterialTheme.typography.bodyMedium)
+private fun SectionHeader(title: String, isVersion: Boolean, tally: Tally, collapsed: Boolean, onToggle: () -> Unit) {
+    val rotation by animateFloatAsState(if (collapsed) -90f else 0f, label = "chevron")
+    Row(Modifier.fillMaxWidth().background(AppColors.Background)
+        .clickable(role = Role.Button, onClickLabel = if (collapsed) "展开" else "收起", onClick = onToggle)
+        .semantics(mergeDescendants = true) {
+            heading()
+            stateDescription = if (collapsed) "已收起" else "已展开"
         }
-        ProgressTrack(progress)
+        .padding(start = 2.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(Icons.Outlined.ExpandMore, null, Modifier.size(18.dp).rotate(rotation), tint = AppColors.Secondary)
+        Text(title, Modifier.padding(start = 6.dp), style = if (isVersion) numberStyle(19) else MaterialTheme.typography.titleSmall)
+        Text("${tally.done}/${tally.total}", Modifier.padding(horizontal = 8.dp), style = MaterialTheme.typography.labelMedium, color = AppColors.Secondary)
+        StripedProgress(tally.ratio, Modifier.width(56.dp), height = 5.dp)
+        Spacer(Modifier.weight(1f))
+        if (tally.complete) Text("已清空", style = MaterialTheme.typography.labelMedium, color = AppColors.AccentText)
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun TodoSegments(onlyTodo: Boolean, onChange: (Boolean) -> Unit, modifier: Modifier = Modifier) {
-    Row(modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(AppColors.Control)
-        .padding(3.dp).selectableGroup()) {
-        listOf(false to "全部", true to "未完成").forEach { (value, label) ->
-            val active = onlyTodo == value
-            Box(Modifier.weight(1f).then(if (active) Modifier.shadow(2.dp, RoundedCornerShape(9.dp)).background(AppColors.Surface, RoundedCornerShape(9.dp)) else Modifier)
-                .clip(RoundedCornerShape(9.dp)).selectable(active, role = Role.Tab, onClick = { onChange(value) })
-                .heightIn(min = 42.dp).padding(vertical = 9.dp), contentAlignment = Alignment.Center) {
-                Text(label, color = if (active) AppColors.Text else AppColors.Secondary, style = MaterialTheme.typography.labelLarge)
-            }
-        }
-    }
-}
-
-@Composable
-private fun AchievementRow(item: AchievementItem, compact: Boolean, locked: Boolean, onToggle: () -> Unit, onDetail: () -> Unit) {
-    Row(Modifier.fillMaxWidth().heightIn(min = 96.dp).padding(start = 6.dp, end = 12.dp, top = if (compact) 12.dp else 18.dp, bottom = if (compact) 12.dp else 18.dp),
-        verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(48.dp).toggleable(item.progress, enabled = !locked, role = Role.Checkbox, onValueChange = { onToggle() })
-            .semantics { contentDescription = item.name; stateDescription = if (item.progress) "已完成" else "未完成" }, contentAlignment = Alignment.Center) {
-            Box(Modifier.size(25.dp).clip(CircleShape).background(if (item.progress) AppColors.Blue else AppColors.Surface)
-                .border(1.5.dp, if (item.progress) AppColors.Blue else AppColors.Secondary.copy(alpha = if (locked) 0.3f else 0.6f), CircleShape), contentAlignment = Alignment.Center) {
-                if (item.progress) Icon(Icons.Outlined.Check, null, Modifier.size(17.dp), tint = AppColors.Surface)
-            }
-        }
-        Row(Modifier.weight(1f).clip(RoundedCornerShape(8.dp)).clickable(onClickLabel = "查看成就详情", onClick = onDetail).padding(start = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(item.name, style = MaterialTheme.typography.titleMedium, color = if (item.progress) AppColors.Secondary else AppColors.Text,
-                    maxLines = if (compact) 1 else 3, overflow = TextOverflow.Ellipsis)
-                Text(item.description, Modifier.padding(top = 3.dp), style = MaterialTheme.typography.bodyMedium, color = AppColors.Secondary,
-                    maxLines = if (compact) 1 else 3, overflow = TextOverflow.Ellipsis)
-                Text("${versionLabel(item.version)}  ·  ${item.category}", Modifier.padding(top = 6.dp), style = MaterialTheme.typography.bodySmall,
-                    color = AppColors.Secondary, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            }
-            Icon(Icons.Outlined.ChevronRight, null, Modifier.padding(start = 6.dp).size(18.dp), tint = AppColors.Secondary.copy(alpha = 0.55f))
-        }
-    }
-}
-
-
-@Composable
-private fun SearchBar(
-    query: String,
-    onQuery: (String) -> Unit,
-    interaction: MutableInteractionSource,
-    focused: Boolean,
-    onDone: () -> Unit,
-    modifier: Modifier = Modifier,
+private fun AchievementRow(
+    item: AchievementItem,
+    meta: String,
+    compact: Boolean,
+    locked: Boolean,
+    expanded: Boolean,
+    selecting: Boolean,
+    selected: Boolean,
+    onToggle: () -> Unit,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
 ) {
-    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+    val vertical = if (compact) 8.dp else 12.dp
+    Row(Modifier.fillMaxWidth().background(if (selected) AppColors.AccentSoft else AppColors.Surface)
+        .combinedClickable(
+            onClickLabel = if (selecting) (if (selected) "取消选择" else "选择") else if (expanded) "收起描述" else "展开描述",
+            onLongClickLabel = "进入多选",
+            onClick = onClick, onLongClick = onLongClick)
+        .then(if (selecting) Modifier.semantics { this.selected = selected } else Modifier)
+        .padding(start = if (selecting) 12.dp else 14.dp, end = 4.dp, top = vertical, bottom = vertical),
+        verticalAlignment = Alignment.CenterVertically) {
+        if (selecting) {
+            Box(Modifier.padding(end = 12.dp).size(22.dp).clip(CircleShape)
+                .background(if (selected) AppColors.Text else AppColors.Surface)
+                .border(2.dp, if (selected) AppColors.Text else AppColors.Secondary, CircleShape), contentAlignment = Alignment.Center) {
+                if (selected) Icon(Icons.Outlined.Check, null, Modifier.size(14.dp), tint = AppColors.Surface)
+            }
+        }
+        Column(Modifier.weight(1f)) {
+            Text(item.name, style = MaterialTheme.typography.titleMedium, color = if (item.progress) AppColors.Secondary else AppColors.Text,
+                maxLines = if (expanded) Int.MAX_VALUE else 2, overflow = TextOverflow.Ellipsis)
+            Text(item.description, Modifier.padding(top = 2.dp), style = MaterialTheme.typography.bodyMedium, color = AppColors.Secondary,
+                maxLines = if (expanded) Int.MAX_VALUE else if (compact) 1 else 2, overflow = TextOverflow.Ellipsis)
+            Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(meta, Modifier.clip(RoundedCornerShape(6.dp)).background(AppColors.Control).padding(horizontal = 6.dp),
+                    style = MaterialTheme.typography.labelSmall, color = AppColors.Secondary, maxLines = 1)
+                if (item.progress) Text("已完成", Modifier.padding(start = 8.dp), style = MaterialTheme.typography.labelSmall, color = AppColors.AccentText)
+            }
+            if (expanded) Text("${versionLabel(item.version)} · ${item.category}" + if (locked) " · 进度已锁定" else "",
+                Modifier.padding(top = 6.dp), style = MaterialTheme.typography.bodySmall, color = AppColors.Secondary)
+        }
+        if (!selecting) {
+            Box(Modifier.size(48.dp)
+                .toggleable(item.progress, role = Role.Checkbox, onValueChange = { onToggle() })
+                .semantics { contentDescription = item.name; stateDescription = if (item.progress) "已完成" else "未完成" },
+                contentAlignment = Alignment.Center) {
+                Box(Modifier.size(26.dp).alpha(if (locked) 0.4f else 1f).clip(RoundedCornerShape(8.dp))
+                    .background(if (item.progress) AppColors.Accent else AppColors.Surface)
+                    .border(2.dp, if (item.progress) AppColors.Accent else AppColors.Secondary, RoundedCornerShape(8.dp)),
+                    contentAlignment = Alignment.Center) {
+                    if (item.progress) Icon(Icons.Outlined.Check, null, Modifier.size(18.dp), tint = AppColors.OnAccent)
+                }
+            }
+        }
+    }
+}
+
+/** One scrollable line kept inside the page gutter; "清除" stays pinned at the end. */
+@Composable
+private fun ActiveFilterChips(ui: TrackerUiState, vm: TrackerViewModel) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.weight(1f).clip(RoundedCornerShape(50)).horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            ui.selectedVersions.sortedWith { a, b -> compareVersionText(b, a) }.forEach { v -> RemovableChip(versionLabel(v)) { vm.toggleVersion(v) } }
+            ui.selectedCategories.sortedBy { categoryOrder.indexOf(it) }.forEach { c -> RemovableChip(c) { vm.toggleCategory(c) } }
+        }
+        Spacer(Modifier.width(6.dp))
+        PlainChip("清除", AppColors.Control, AppColors.Secondary, "清除全部筛选", vm::clearFilters)
+    }
+}
+
+@Composable
+private fun PlainChip(label: String, background: androidx.compose.ui.graphics.Color, color: androidx.compose.ui.graphics.Color, clickLabel: String, onClick: () -> Unit) {
+    Text(label, Modifier.clip(RoundedCornerShape(50)).background(background)
+        .clickable(role = Role.Button, onClickLabel = clickLabel, onClick = onClick).padding(horizontal = 12.dp, vertical = 6.dp),
+        style = MaterialTheme.typography.labelMedium, color = color, maxLines = 1)
+}
+
+@Composable
+private fun RemovableChip(label: String, onRemove: () -> Unit) {
+    Row(Modifier.clip(RoundedCornerShape(50)).background(AppColors.AccentSoft)
+        .clickable(role = Role.Button, onClickLabel = "移除筛选条件 $label", onClick = onRemove)
+        .padding(start = 10.dp, end = 6.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, style = MaterialTheme.typography.labelMedium, color = AppColors.AccentText, maxLines = 1)
+        Icon(Icons.Outlined.Close, null, Modifier.padding(start = 2.dp).size(14.dp), tint = AppColors.AccentText)
+    }
+}
+
+@Composable
+private fun EmptyState(ui: TrackerUiState, hasData: Boolean, hasFilters: Boolean, onShowAll: () -> Unit) {
+    val allDone = hasData && ui.status == StatusFilter.TODO && !hasFilters && ui.query.isBlank()
+    Column(Modifier.fillMaxWidth().padding(horizontal = PageGutter, vertical = 48.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Icon(if (allDone) Icons.Outlined.EmojiEvents else Icons.Outlined.SearchOff, null, Modifier.size(40.dp), tint = AppColors.Secondary)
+        Text(ui.dataError ?: if (allDone) "全部完成了" else "没有符合条件的成就", Modifier.padding(top = 16.dp), style = MaterialTheme.typography.titleMedium)
+        Text(if (ui.dataError != null) "请重新打开应用后重试" else "换个关键词，或查看全部成就", Modifier.padding(top = 6.dp),
+            style = MaterialTheme.typography.bodyMedium, color = AppColors.Secondary)
+        if (ui.dataError == null && !allDone) TextButton(onClick = onShowAll) { Text("查看全部", color = AppColors.AccentText) }
+    }
+}
+
+@Composable
+private fun SearchField(query: String, onQuery: (String) -> Unit, onCancel: () -> Unit, onDone: () -> Unit) {
+    val requester = remember { FocusRequester() }
+    LaunchedEffect(Unit) { requester.requestFocus() }
+    Row(Modifier.fillMaxWidth().heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
         BasicTextField(
             value = query,
             onValueChange = onQuery,
-            modifier = Modifier.weight(1f).heightIn(min = 44.dp).clip(RoundedCornerShape(12.dp)).background(AppColors.Control)
-                .semantics { contentDescription = "搜索成就" },
+            modifier = Modifier.weight(1f).focusRequester(requester).heightIn(min = 44.dp).clip(RoundedCornerShape(12.dp))
+                .background(AppColors.Surface).semantics { contentDescription = "搜索成就" },
             singleLine = true,
-            interactionSource = interaction,
             textStyle = MaterialTheme.typography.bodyLarge.copy(color = AppColors.Text),
-            cursorBrush = SolidColor(AppColors.Blue),
+            cursorBrush = SolidColor(AppColors.AccentDeep),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             keyboardActions = KeyboardActions(onSearch = { onDone() }),
             decorationBox = { inner ->
                 Row(Modifier.padding(start = 12.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Outlined.Search, null, tint = AppColors.Secondary, modifier = Modifier.size(21.dp))
+                    Icon(Icons.Outlined.Search, null, tint = AppColors.Secondary, modifier = Modifier.size(20.dp))
                     Box(Modifier.weight(1f).padding(horizontal = 8.dp, vertical = 10.dp)) {
-                        if (query.isEmpty()) Text("搜索成就", color = AppColors.Secondary, style = MaterialTheme.typography.bodyLarge)
+                        if (query.isEmpty()) Text("搜索名称、描述或分类", color = AppColors.Secondary, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
                         inner()
                     }
-                    if (query.isNotEmpty()) IconButton(onClick = { onQuery("") }, modifier = Modifier.size(44.dp)) {
+                    if (query.isNotEmpty()) IconButton(onClick = { onQuery("") }, modifier = Modifier.size(40.dp)) {
                         Icon(Icons.Outlined.Cancel, "清空搜索", tint = AppColors.Secondary, modifier = Modifier.size(18.dp))
                     }
                 }
             },
         )
-        if (focused) TextButton(onClick = onDone) { Text("完成") }
+        TextButton(onClick = onCancel) { Text("取消", color = AppColors.AccentText) }
     }
 }
