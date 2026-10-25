@@ -21,4 +21,5 @@ keystore.properties
 *.jks
 *.keystore
 /ZZZ成就的签名文件/
+/签名文件/
 /.local-signing/
