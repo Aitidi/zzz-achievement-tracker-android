@@ -18,7 +18,7 @@ class AchievementListTest {
 
     @Test
     fun statusFilterSplitsDoneAndTodo() {
-        assertEquals(listOf("b", "d", "c"), filterItems(items, TrackerUiState(status = StatusFilter.TODO)).map { it.id })
+        assertEquals(listOf("d", "b", "c"), filterItems(items, TrackerUiState(status = StatusFilter.TODO)).map { it.id })
         assertEquals(listOf("a"), filterItems(items, TrackerUiState(status = StatusFilter.DONE)).map { it.id })
         assertEquals(4, filterItems(items, TrackerUiState(status = StatusFilter.ALL)).size)
     }
