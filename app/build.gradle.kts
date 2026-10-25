@@ -16,8 +16,8 @@ android {
         applicationId = "com.aitidi.zzzachievementtracker"
         minSdk = 26
         targetSdk = 36
-        versionCode = 107
-        versionName = "1.0.6.1"
+        versionCode = 106
+        versionName = "1.0.6"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
     }
