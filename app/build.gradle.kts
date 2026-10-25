@@ -30,7 +30,8 @@ android {
     }
 
     fun propOrEnv(propKey: String, envKey: String): String? {
-        return (keystoreProps.getProperty(propKey) ?: System.getenv(envKey))?.takeIf { it.isNotBlank() }
+        // Trim: secrets pasted from a text editor often carry a trailing line break.
+        return (keystoreProps.getProperty(propKey) ?: System.getenv(envKey))?.trim()?.takeIf { it.isNotBlank() }
     }
 
     val releaseStoreFile = propOrEnv("storeFile", "ANDROID_KEYSTORE_PATH")
