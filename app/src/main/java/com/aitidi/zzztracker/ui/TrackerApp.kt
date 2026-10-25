@@ -44,6 +44,7 @@ internal fun versionLabel(version: String) = "v" + version.trim().removePrefix("
 fun TrackerApp(vm: TrackerViewModel = viewModel()) {
     val ui by vm.ui.collectAsStateWithLifecycle()
     val allItems by vm.items.collectAsStateWithLifecycle()
+    val pendingImport by vm.pendingImport.collectAsStateWithLifecycle()
     val versions = remember(allItems) { allItems.map { it.version }.distinct().sortedWith { a, b -> compareVersionText(b, a) } }
     val categories = remember(allItems) { allItems.map { it.category }.distinct().sorted() }
     var tab by rememberSaveable { mutableStateOf(HomeTab.LIST) }
@@ -73,6 +74,19 @@ fun TrackerApp(vm: TrackerViewModel = viewModel()) {
     }
     ZzzTrackerTheme {
         if (showFilter) FilterSheet(ui, versions, categories, vm, onDismiss = { showFilter = false })
+        pendingImport?.let { pending ->
+            AlertDialog(
+                onDismissRequest = vm::cancelImport,
+                title = { Text("覆盖当前进度？") },
+                text = { Text(
+                    "备份共 ${pending.source} 条，其中 ${pending.matched} 条与当前成就匹配（已完成 ${pending.completed} 条）。\n\n" +
+                        "导入后将以备份为准：当前已完成的 ${pending.currentCompleted} 条会被替换，备份中没有的成就会标为未完成。此操作无法撤销。"
+                ) },
+                confirmButton = { TextButton(onClick = vm::confirmImport) { Text("覆盖导入", color = AppColors.Red) } },
+                dismissButton = { TextButton(onClick = vm::cancelImport) { Text("取消") } },
+                containerColor = AppColors.Surface,
+            )
+        }
         if (showSort) SortSheet(ui.sortMode, onSelect = { vm.setSortMode(it); showSort = false }, onDismiss = { showSort = false })
         Scaffold(
             modifier = Modifier.fillMaxSize().imePadding(),

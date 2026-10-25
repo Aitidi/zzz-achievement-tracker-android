@@ -26,6 +26,9 @@ class CategoryMigrationIntegrationTest {
             json.decodeFromString<VersionPayload>(context.assets.open(version.file).bufferedReader().use { it.readText() }).items
         }.mapIndexed { i, raw -> raw.toEntity().copy(category = raw.分类 ?: raw.category!!, progress = i % 3 == 0) }
         val expected = old.associate { it.id to it.progress }
+        // Derived from the bundled catalog so new version packs don't break the test.
+        val mergedCategoryCount = old.count { it.category in setOf("布亚斯特", "罗斯凯利法") }
+        assertTrue(mergedCategoryCount > 0)
         val database = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).build()
         val backup = File.createTempFile("category-migration-", ".json", context.cacheDir)
         try {
@@ -38,18 +41,44 @@ class CategoryMigrationIntegrationTest {
                 repository.ensureSeeded()
                 val migrated = dao.getAll()
                 assertEquals(expected, migrated.associate { item -> item.id to item.progress })
-                assertEquals(31, migrated.count { item -> item.category == "罗斯凯利法" })
+                assertEquals(mergedCategoryCount, migrated.count { item -> item.category == "罗斯凯利法" })
                 assertFalse(migrated.any { item -> item.category == "布亚斯特" })
             }
             repository.resetAllProgress()
             assertTrue(dao.getAll().none { it.progress })
             val imported = repository.importProgressFromUri(Uri.fromFile(backup))
-            assertEquals(804, imported.applied)
+            assertEquals(expected.size, imported.applied)
+            assertEquals(expected.size, imported.source)
             assertEquals(expected, dao.getAll().associate { it.id to it.progress })
-            assertEquals(31, dao.getAll().count { it.category == "罗斯凯利法" })
+            assertEquals(mergedCategoryCount, dao.getAll().count { it.category == "罗斯凯利法" })
         } finally {
             database.close()
             backup.delete()
+        }
+    }
+
+    @Test
+    fun rejectedImportLeavesProgressUntouched() = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val database = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).build()
+        val file = File.createTempFile("invalid-import-", ".json", context.cacheDir)
+        try {
+            val dao = database.achievementDao()
+            val repository = TrackerRepository(context, dao)
+            repository.ensureSeeded()
+            val first = dao.getAll().first()
+            dao.updateProgress(first.id, true)
+            val before = dao.getAll().associate { it.id to it.progress }
+            for (content in listOf("", "{}", "{\"items\": []}", "{\"items\": [{\"id\": \"missing\", \"progress\": true}]}")) {
+                file.writeText(content)
+                assertThrows(InvalidImportException::class.java) {
+                    runBlocking { repository.readImportFromUri(Uri.fromFile(file)) }
+                }
+                assertEquals(before, dao.getAll().associate { it.id to it.progress })
+            }
+        } finally {
+            database.close()
+            file.delete()
         }
     }
 

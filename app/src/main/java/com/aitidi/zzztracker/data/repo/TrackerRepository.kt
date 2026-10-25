@@ -35,16 +35,21 @@ class TrackerRepository(private val context: Context, private val dao: Achieveme
         return items.count { it.progress }
     }
 
-    suspend fun importProgressFromUri(uri: Uri): ImportResult {
+    /** Reads and validates a backup without touching the database; apply it with [applyImport]. */
+    suspend fun readImportFromUri(uri: Uri): PendingImport {
         val text = context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
             ?: error("无法读取文件")
-        val payload = json.decodeFromString(ExportPayload.serializer(), text)
-        val currentIds = dao.getAll().asSequence().map { it.id }.toSet()
-        val imported = payload.items.associate { it.id to it.progress }
-        dao.replaceProgress(imported)
-        val applied = imported.keys.count { it in currentIds }
-        return ImportResult(applied = applied, source = payload.items.size)
+        val current = dao.getAll()
+        return parseImport(text, current.asSequence().map { it.id }.toSet(), current.count { it.progress })
     }
+
+    /** Replaces all progress with the backup: achievements missing from it become incomplete. */
+    suspend fun applyImport(pending: PendingImport): ImportResult {
+        dao.replaceProgress(pending.progressById)
+        return ImportResult(applied = pending.matched, source = pending.source)
+    }
+
+    suspend fun importProgressFromUri(uri: Uri): ImportResult = applyImport(readImportFromUri(uri))
 
     private fun loadFromVersionPacks(): List<AchievementEntity> {
         val indexText = context.assets.open("data/index.json").bufferedReader().use { it.readText() }
@@ -80,6 +85,40 @@ internal fun stableAchievementId(name: String, version: String, category: String
 private fun AchievementEntity.toModel() = AchievementItem(id, name, description, version, AchievementCategories.canonical(category), progress)
 
 data class ImportResult(val applied: Int, val source: Int)
+
+data class PendingImport(
+    val progressById: Map<String, Boolean>,
+    /** Entries in the backup file. */
+    val source: Int,
+    /** Backup entries whose id exists in the current catalog. */
+    val matched: Int,
+    /** Matched entries marked completed in the backup. */
+    val completed: Int,
+    /** Completed achievements in the database before the import. */
+    val currentCompleted: Int,
+)
+
+class InvalidImportException(message: String) : IllegalArgumentException(message)
+
+private val importJson = Json { ignoreUnknownKeys = true }
+
+/** Rejects empty files, non-backup JSON and backups that share no id with the catalog. */
+internal fun parseImport(text: String, currentIds: Set<String>, currentCompleted: Int): PendingImport {
+    if (text.isBlank()) throw InvalidImportException("文件为空")
+    val payload = runCatching { importJson.decodeFromString(ExportPayload.serializer(), text) }
+        .getOrElse { throw InvalidImportException("不是有效的进度备份文件") }
+    if (payload.items.isEmpty()) throw InvalidImportException("备份中没有任何进度记录")
+    val imported = payload.items.associate { it.id to it.progress }
+    val matched = imported.filterKeys { it in currentIds }
+    if (matched.isEmpty()) throw InvalidImportException("备份中的成就与当前数据不匹配")
+    return PendingImport(
+        progressById = imported,
+        source = payload.items.size,
+        matched = matched.size,
+        completed = matched.count { it.value },
+        currentCompleted = currentCompleted,
+    )
+}
 
 @Serializable
 data class VersionIndex(

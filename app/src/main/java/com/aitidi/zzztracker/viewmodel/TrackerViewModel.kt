@@ -6,6 +6,8 @@ import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.aitidi.zzztracker.data.db.AppDatabase
+import com.aitidi.zzztracker.data.repo.InvalidImportException
+import com.aitidi.zzztracker.data.repo.PendingImport
 import com.aitidi.zzztracker.data.repo.TrackerRepository
 import com.aitidi.zzztracker.model.AchievementItem
 import com.aitidi.zzztracker.model.AchievementCategories
@@ -49,6 +51,10 @@ class TrackerViewModel(app: Application) : AndroidViewModel(app) {
     val items = repo.observeItems().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     private val _ui = MutableStateFlow(loadUiState())
     val ui: StateFlow<TrackerUiState> = _ui.asStateFlow()
+
+    private val _pendingImport = MutableStateFlow<PendingImport?>(null)
+    /** A validated backup waiting for the user to confirm overwriting current progress. */
+    val pendingImport: StateFlow<PendingImport?> = _pendingImport.asStateFlow()
 
     private val _events = MutableSharedFlow<String>(replay = 0, extraBufferCapacity = 16)
     val events = _events.asSharedFlow()
@@ -115,10 +121,33 @@ class TrackerViewModel(app: Application) : AndroidViewModel(app) {
             return
         }
         viewModelScope.launch {
-            runCatching { repo.importProgressFromUri(uri) }
-                .onSuccess { r -> _events.emit("导入完成：应用 ${r.applied}/${r.source} 条") }
-                .onFailure { _events.emit("导入失败：${it.message ?: "文件格式错误或内容无效"}") }
+            runCatching { repo.readImportFromUri(uri) }
+                .onSuccess { _pendingImport.value = it }
+                .onFailure {
+                    val reason = if (it is InvalidImportException) it.message else "文件格式错误或内容无效"
+                    _events.emit("导入失败：$reason，当前进度未改动")
+                }
         }
+    }
+
+    fun confirmImport() {
+        val pending = _pendingImport.value ?: return
+        _pendingImport.value = null
+        if (_ui.value.lockProgressEditing) {
+            _events.tryEmit("已锁定，请先解锁后导入")
+            return
+        }
+        viewModelScope.launch {
+            runCatching { repo.applyImport(pending) }
+                .onSuccess { r -> _events.emit("导入完成：应用 ${r.applied}/${r.source} 条") }
+                .onFailure { _events.emit("导入失败：${it.message ?: "未知错误"}") }
+        }
+    }
+
+    fun cancelImport() {
+        if (_pendingImport.value == null) return
+        _pendingImport.value = null
+        _events.tryEmit("已取消导入，当前进度未改动")
     }
 
     fun requestResetProgress() {
