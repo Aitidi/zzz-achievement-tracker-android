@@ -12,7 +12,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.aitidi.zzztracker.model.AchievementCategories
@@ -66,9 +69,19 @@ internal fun FilterSheet(
                     CategoryGrid(ungrouped, byCategory, ui.selectedCategories, vm::toggleCategory)
                 }
             }
-            Button(onClick = onDismiss, Modifier.fillMaxWidth().padding(horizontal = PageGutter, vertical = 12.dp).heightIn(min = 48.dp),
-                shape = RoundedCornerShape(14.dp), colors = ButtonDefaults.buttonColors(containerColor = AppColors.Accent, contentColor = AppColors.OnAccent)) {
-                Text("显示 ${countLabel(resultCount)} 项", style = MaterialTheme.typography.titleSmall)
+            HorizontalDivider(thickness = 0.5.dp, color = AppColors.Separator)
+            val conditions = ui.selectedVersions.size + ui.selectedCategories.size
+            Row(Modifier.fillMaxWidth().padding(horizontal = PageGutter, vertical = 12.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                Column(Modifier.weight(1f).semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite }) {
+                    Text("${countLabel(resultCount)} 个成就", style = MaterialTheme.typography.titleMedium)
+                    Text(if (conditions > 0) "符合已选的 $conditions 个条件" else "未选条件，显示全部",
+                        style = MaterialTheme.typography.bodySmall, color = AppColors.Secondary)
+                }
+                Button(onClick = onDismiss, Modifier.heightIn(min = 48.dp), shape = RoundedCornerShape(14.dp),
+                    contentPadding = PaddingValues(horizontal = 28.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = AppColors.Accent, contentColor = AppColors.OnAccent)) {
+                    Text("完成", style = MaterialTheme.typography.titleSmall)
+                }
             }
         }
     }

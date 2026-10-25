@@ -43,7 +43,6 @@ data class TrackerUiState(
     val groupMode: GroupMode = GroupMode.VERSION,
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val lockProgressEditing: Boolean = false,
-    val compactMode: Boolean = true,
     val dataError: String? = null,
 )
 
@@ -120,7 +119,6 @@ class TrackerViewModel(app: Application) : AndroidViewModel(app) {
     fun setSortMode(v: SortMode) = updateUi { copy(sortMode = v) }
     fun toggleLockProgressEditing() = updateUi { copy(lockProgressEditing = !lockProgressEditing) }
 
-    fun setCompactMode(v: Boolean) = updateUi { copy(compactMode = v) }
 
     fun toggle(item: AchievementItem, checked: Boolean) =
         setProgress(listOf(item), checked, if (checked) "已完成「${item.name}」" else "已取消「${item.name}」")
@@ -231,7 +229,6 @@ class TrackerViewModel(app: Application) : AndroidViewModel(app) {
             groupMode = prefs.getString("groupMode", null)?.let { runCatching { GroupMode.valueOf(it) }.getOrNull() } ?: GroupMode.VERSION,
             themeMode = prefs.getString("themeMode", null)?.let { runCatching { ThemeMode.valueOf(it) }.getOrNull() } ?: ThemeMode.SYSTEM,
             lockProgressEditing = prefs.getBoolean("lockProgressEditing", false),
-            compactMode = prefs.getBoolean("compactMode", true),
         )
     }
 
@@ -245,7 +242,6 @@ class TrackerViewModel(app: Application) : AndroidViewModel(app) {
             .putString("groupMode", state.groupMode.name)
             .putString("themeMode", state.themeMode.name)
             .putBoolean("lockProgressEditing", state.lockProgressEditing)
-            .putBoolean("compactMode", state.compactMode)
             .apply()
     }
 

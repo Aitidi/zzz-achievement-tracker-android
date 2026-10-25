@@ -158,7 +158,6 @@ private fun TrackerContent(vm: TrackerViewModel, ui: TrackerUiState) {
                     onFilter = { showFilter = true })
                 HomeTab.SETTINGS -> SettingsScreen(ui, versions.firstOrNull(), allItems.size,
                     onTheme = vm::setThemeMode,
-                    onCompact = vm::setCompactMode,
                     onToggleLock = vm::toggleLockProgressEditing,
                     onExport = { export.launch("zzz_progress_backup.json") },
                     onImport = { import.launch(arrayOf("application/json")) },

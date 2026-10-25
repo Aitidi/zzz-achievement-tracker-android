@@ -3,6 +3,8 @@ package com.aitidi.zzztracker.ui
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -74,7 +76,6 @@ internal fun AchievementScreen(
     val focus = LocalFocusManager.current
     var searching by rememberSaveable { mutableStateOf(ui.query.isNotEmpty()) }
     var menuOpen by remember { mutableStateOf(false) }
-    var expandedId by rememberSaveable { mutableStateOf<String?>(null) }
     var collapsed by remember { mutableStateOf(emptySet<String>()) }
     val closeSearch = { searching = false; vm.setQuery(""); focus.clearFocus() }
     BackHandler(searching && selection == null) { closeSearch() }
@@ -91,34 +92,33 @@ internal fun AchievementScreen(
     }
 
     Column(Modifier.fillMaxSize()) {
-        Column(Modifier.padding(horizontal = PageGutter).padding(top = 8.dp, bottom = 4.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            if (searching) {
-                SearchField(ui.query, vm::setQuery, onCancel = closeSearch, onDone = { focus.clearFocus() })
-            } else {
-                Row(Modifier.fillMaxWidth().heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text("成就", Modifier.weight(1f), style = MaterialTheme.typography.headlineLarge)
-                    Text("${countLabel(total.done)}/${countLabel(total.total)}", Modifier.padding(end = 4.dp), style = numberStyle(16), color = AppColors.Secondary)
-                    IconButton(onClick = { searching = true }) { Icon(Icons.Outlined.Search, "搜索成就", tint = AppColors.Text) }
-                    Box {
-                        IconButton(onClick = { menuOpen = true }) {
-                            Icon(if (ui.lockProgressEditing) Icons.Outlined.Lock else Icons.Outlined.MoreVert, "更多操作",
-                                tint = if (ui.lockProgressEditing) AppColors.AccentText else AppColors.Text)
-                        }
-                        DropdownMenu(menuOpen, onDismissRequest = { menuOpen = false }, containerColor = AppColors.Surface) {
-                            DropdownMenuItem(text = { Text("多选") }, leadingIcon = { Icon(Icons.Outlined.Checklist, null) },
-                                onClick = { menuOpen = false; expandedId = null; onSelectionChange(emptySet()) })
-                            DropdownMenuItem(text = { Text(if (ui.lockProgressEditing) "解锁进度编辑" else "锁定进度编辑") },
-                                leadingIcon = { Icon(if (ui.lockProgressEditing) Icons.Outlined.LockOpen else Icons.Outlined.Lock, null) },
-                                onClick = { menuOpen = false; vm.toggleLockProgressEditing() })
-                            DropdownMenuItem(text = { Text("版本排序：${ui.sortMode.label}") }, leadingIcon = { Icon(Icons.AutoMirrored.Outlined.Sort, null) },
-                                onClick = {
-                                    menuOpen = false
-                                    vm.setSortMode(if (ui.sortMode == SortMode.VERSION_DESC) SortMode.VERSION_ASC else SortMode.VERSION_DESC)
-                                })
-                        }
+        if (searching) {
+            TopBar(null) { SearchField(ui.query, vm::setQuery, onCancel = closeSearch, onDone = { focus.clearFocus() }) }
+        } else {
+            TopBar("成就") {
+                Text("${countLabel(total.done)}/${countLabel(total.total)}", Modifier.padding(end = 4.dp), style = numberStyle(16), color = AppColors.Secondary)
+                IconButton(onClick = { searching = true }) { Icon(Icons.Outlined.Search, "搜索成就", tint = AppColors.Text) }
+                Box {
+                    IconButton(onClick = { menuOpen = true }) {
+                        Icon(if (ui.lockProgressEditing) Icons.Outlined.Lock else Icons.Outlined.MoreVert, "更多操作",
+                            tint = if (ui.lockProgressEditing) AppColors.AccentText else AppColors.Text)
+                    }
+                    DropdownMenu(menuOpen, onDismissRequest = { menuOpen = false }, containerColor = AppColors.Surface) {
+                        DropdownMenuItem(text = { Text("多选") }, leadingIcon = { Icon(Icons.Outlined.Checklist, null) },
+                            onClick = { menuOpen = false; onSelectionChange(emptySet()) })
+                        DropdownMenuItem(text = { Text(if (ui.lockProgressEditing) "解锁进度编辑" else "锁定进度编辑") },
+                            leadingIcon = { Icon(if (ui.lockProgressEditing) Icons.Outlined.LockOpen else Icons.Outlined.Lock, null) },
+                            onClick = { menuOpen = false; vm.toggleLockProgressEditing() })
+                        DropdownMenuItem(text = { Text("版本排序：${ui.sortMode.label}") }, leadingIcon = { Icon(Icons.AutoMirrored.Outlined.Sort, null) },
+                            onClick = {
+                                menuOpen = false
+                                vm.setSortMode(if (ui.sortMode == SortMode.VERSION_DESC) SortMode.VERSION_ASC else SortMode.VERSION_DESC)
+                            })
                     }
                 }
             }
+        }
+        Column(Modifier.padding(horizontal = PageGutter).padding(bottom = 4.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 SegmentedControl(StatusFilter.entries, ui.status, { it.label }, vm::setStatus, Modifier.weight(1f))
                 val active = filterCount > 0
@@ -141,8 +141,8 @@ internal fun AchievementScreen(
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("${countLabel(filtered.size)} 项", Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = AppColors.Secondary)
-                Text("按 ", style = MaterialTheme.typography.bodySmall, color = AppColors.Secondary)
-                SegmentedControl(GroupMode.entries, ui.groupMode, { it.label }, vm::setGroupMode, Modifier.width(132.dp))
+                Text("分组", Modifier.padding(end = 6.dp), style = MaterialTheme.typography.bodySmall, color = AppColors.Secondary)
+                SegmentedControl(GroupMode.entries, ui.groupMode, { it.label }, vm::setGroupMode, Modifier.width(128.dp), compact = true)
             }
         }
         if (filtered.isEmpty()) {
@@ -170,20 +170,15 @@ internal fun AchievementScreen(
                         AchievementRow(
                             item = item,
                             meta = if (ui.groupMode == GroupMode.VERSION) item.category else versionLabel(item.version),
-                            compact = ui.compactMode,
                             locked = ui.lockProgressEditing,
-                            expanded = expandedId == item.id,
                             selecting = selection != null,
                             selected = selection?.contains(item.id) == true,
                             onToggle = { vm.toggle(item, !item.progress) },
-                            onClick = {
-                                focus.clearFocus()
+                            onSelect = {
                                 if (selection != null) onSelectionChange(if (item.id in selection) selection - item.id else selection + item.id)
-                                else expandedId = if (expandedId == item.id) null else item.id
                             },
                             onLongClick = {
                                 focus.clearFocus()
-                                expandedId = null
                                 onSelectionChange((selection ?: emptySet()) + item.id)
                             },
                         )
@@ -215,28 +210,29 @@ private fun SectionHeader(title: String, isVersion: Boolean, tally: Tally, colla
     }
 }
 
+/** Only the checkbox changes progress; a long press starts multi-select, where tapping the card selects it. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun AchievementRow(
     item: AchievementItem,
     meta: String,
-    compact: Boolean,
     locked: Boolean,
-    expanded: Boolean,
     selecting: Boolean,
     selected: Boolean,
     onToggle: () -> Unit,
-    onClick: () -> Unit,
+    onSelect: () -> Unit,
     onLongClick: () -> Unit,
 ) {
-    val vertical = if (compact) 8.dp else 12.dp
+    val interaction = remember { MutableInteractionSource() }
     Row(Modifier.fillMaxWidth().background(if (selected) AppColors.AccentSoft else AppColors.Surface)
         .combinedClickable(
-            onClickLabel = if (selecting) (if (selected) "取消选择" else "选择") else if (expanded) "收起描述" else "展开描述",
-            onLongClickLabel = "进入多选",
-            onClick = onClick, onLongClick = onLongClick)
+            interactionSource = interaction,
+            indication = if (selecting) LocalIndication.current else null,
+            onClickLabel = if (selecting) (if (selected) "取消选择" else "选择") else null,
+            onLongClickLabel = if (selecting) null else "进入多选",
+            onClick = onSelect, onLongClick = onLongClick)
         .then(if (selecting) Modifier.semantics { this.selected = selected } else Modifier)
-        .padding(start = if (selecting) 12.dp else 14.dp, end = 4.dp, top = vertical, bottom = vertical),
+        .padding(start = if (selecting) 12.dp else 14.dp, end = 4.dp, top = 12.dp, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically) {
         if (selecting) {
             Box(Modifier.padding(end = 12.dp).size(22.dp).clip(CircleShape)
@@ -246,17 +242,13 @@ private fun AchievementRow(
             }
         }
         Column(Modifier.weight(1f)) {
-            Text(item.name, style = MaterialTheme.typography.titleMedium, color = if (item.progress) AppColors.Secondary else AppColors.Text,
-                maxLines = if (expanded) Int.MAX_VALUE else 2, overflow = TextOverflow.Ellipsis)
-            Text(item.description, Modifier.padding(top = 2.dp), style = MaterialTheme.typography.bodyMedium, color = AppColors.Secondary,
-                maxLines = if (expanded) Int.MAX_VALUE else if (compact) 1 else 2, overflow = TextOverflow.Ellipsis)
+            Text(item.name, style = MaterialTheme.typography.titleMedium, color = if (item.progress) AppColors.Secondary else AppColors.Text)
+            Text(item.description, Modifier.padding(top = 2.dp), style = MaterialTheme.typography.bodyMedium, color = AppColors.Secondary)
             Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(meta, Modifier.clip(RoundedCornerShape(6.dp)).background(AppColors.Control).padding(horizontal = 6.dp),
                     style = MaterialTheme.typography.labelSmall, color = AppColors.Secondary, maxLines = 1)
                 if (item.progress) Text("已完成", Modifier.padding(start = 8.dp), style = MaterialTheme.typography.labelSmall, color = AppColors.AccentText)
             }
-            if (expanded) Text("${versionLabel(item.version)} · ${item.category}" + if (locked) " · 进度已锁定" else "",
-                Modifier.padding(top = 6.dp), style = MaterialTheme.typography.bodySmall, color = AppColors.Secondary)
         }
         if (!selecting) {
             Box(Modifier.size(48.dp)
@@ -321,7 +313,7 @@ private fun EmptyState(ui: TrackerUiState, hasData: Boolean, hasFilters: Boolean
 private fun SearchField(query: String, onQuery: (String) -> Unit, onCancel: () -> Unit, onDone: () -> Unit) {
     val requester = remember { FocusRequester() }
     LaunchedEffect(Unit) { requester.requestFocus() }
-    Row(Modifier.fillMaxWidth().heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().padding(end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         BasicTextField(
             value = query,
             onValueChange = onQuery,

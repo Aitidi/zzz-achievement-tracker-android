@@ -35,7 +35,6 @@ internal fun SettingsScreen(
     catalogVersion: String?,
     catalogSize: Int,
     onTheme: (ThemeMode) -> Unit,
-    onCompact: (Boolean) -> Unit,
     onToggleLock: () -> Unit,
     onExport: () -> Unit,
     onImport: () -> Unit,
@@ -44,47 +43,43 @@ internal fun SettingsScreen(
 ) {
     val context = LocalContext.current
     val appVersion = remember { runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = PageGutter).padding(bottom = 24.dp)) {
-        PageTitle("设置")
-        SectionLabel("外观", Modifier.padding(top = 0.dp))
-        Column(Modifier.clip(GroupShape).background(AppColors.Surface)) {
-            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+    Column(Modifier.fillMaxSize()) {
+        TopBar("设置")
+        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = PageGutter).padding(bottom = 24.dp)) {
+            SectionLabel("外观", Modifier.padding(top = 0.dp))
+            Row(Modifier.fillMaxWidth().clip(GroupShape).background(AppColors.Surface).padding(horizontal = 16.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically) {
                 Text("主题", Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
                 SegmentedControl(ThemeMode.entries, ui.themeMode, { it.label }, onTheme, Modifier.width(208.dp))
             }
-            GroupDivider()
-            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("列表密度", Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
-                SegmentedControl(listOf(false, true), ui.compactMode, { if (it) "紧凑" else "舒适" }, onCompact, Modifier.width(140.dp))
+            SectionLabel("进度")
+            Row(Modifier.fillMaxWidth().clip(GroupShape).background(AppColors.Surface)
+                .toggleable(ui.lockProgressEditing, role = Role.Switch, onValueChange = { onToggleLock() })
+                .padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                SettingsIcon(Icons.Outlined.Lock)
+                Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
+                    Text("锁定进度编辑", style = MaterialTheme.typography.titleMedium)
+                    Text("防止误触，锁定后勾选、导入和重置都不可用", style = MaterialTheme.typography.bodySmall, color = AppColors.Secondary)
+                }
+                Switch(ui.lockProgressEditing, onCheckedChange = null, colors = SwitchDefaults.colors(
+                    checkedThumbColor = Color.White, checkedTrackColor = AppColors.Accent, checkedBorderColor = AppColors.Accent,
+                    uncheckedThumbColor = Color.White, uncheckedTrackColor = AppColors.Control, uncheckedBorderColor = AppColors.Separator))
             }
-        }
-        SectionLabel("进度")
-        Row(Modifier.fillMaxWidth().clip(GroupShape).background(AppColors.Surface)
-            .toggleable(ui.lockProgressEditing, role = Role.Switch, onValueChange = { onToggleLock() })
-            .padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            SettingsIcon(Icons.Outlined.Lock)
-            Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
-                Text("锁定进度编辑", style = MaterialTheme.typography.titleMedium)
-                Text("防止误触，锁定后勾选、导入和重置都不可用", style = MaterialTheme.typography.bodySmall, color = AppColors.Secondary)
+            SectionLabel("数据")
+            Column(Modifier.clip(GroupShape).background(AppColors.Surface)) {
+                SettingsRow("导出备份", "保存为 JSON 文件", Icons.Outlined.FileUpload, onClick = onExport)
+                GroupDivider(64.dp)
+                SettingsRow("从备份恢复", "会先显示条数，确认后才覆盖", Icons.Outlined.FileDownload, onClick = onImport)
             }
-            Switch(ui.lockProgressEditing, onCheckedChange = null, colors = SwitchDefaults.colors(
-                checkedThumbColor = Color.White, checkedTrackColor = AppColors.Accent, checkedBorderColor = AppColors.Accent,
-                uncheckedThumbColor = Color.White, uncheckedTrackColor = AppColors.Control, uncheckedBorderColor = AppColors.Separator))
-        }
-        SectionLabel("数据")
-        Column(Modifier.clip(GroupShape).background(AppColors.Surface)) {
-            SettingsRow("导出备份", "保存为 JSON 文件", Icons.Outlined.FileUpload, onClick = onExport)
-            GroupDivider(64.dp)
-            SettingsRow("从备份恢复", "会先显示条数，确认后才覆盖", Icons.Outlined.FileDownload, onClick = onImport)
-        }
-        HoldToResetButton(Modifier.padding(top = 12.dp), enabled = !ui.lockProgressEditing, onReset = onReset, onHint = onHint)
-        Text("重置后底部会出现“撤销”。所有进度只保存在本机。", Modifier.fillMaxWidth().padding(top = 8.dp),
-            style = MaterialTheme.typography.bodySmall, color = AppColors.Secondary)
-        SectionLabel("关于")
-        Column(Modifier.clip(GroupShape).background(AppColors.Surface)) {
-            InfoRow("成就数据", (catalogVersion?.let { versionLabel(it) + " · " } ?: "") + "共 ${countLabel(catalogSize)} 个")
-            GroupDivider()
-            InfoRow("应用版本", appVersion ?: "—")
+            HoldToResetButton(Modifier.padding(top = 12.dp), enabled = !ui.lockProgressEditing, onReset = onReset, onHint = onHint)
+            Text("重置后底部会出现“撤销”。所有进度只保存在本机。", Modifier.fillMaxWidth().padding(top = 8.dp),
+                style = MaterialTheme.typography.bodySmall, color = AppColors.Secondary)
+            SectionLabel("关于")
+            Column(Modifier.clip(GroupShape).background(AppColors.Surface)) {
+                InfoRow("成就数据", (catalogVersion?.let { versionLabel(it) + " · " } ?: "") + "共 ${countLabel(catalogSize)} 个")
+                GroupDivider()
+                InfoRow("应用版本", appVersion ?: "—")
+            }
         }
     }
 }

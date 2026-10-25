@@ -42,14 +42,12 @@ internal data class Tally(val done: Int, val total: Int) {
 
 internal fun List<AchievementItem>.tally() = Tally(count { it.progress }, size)
 
+/** Fixed-height bar shared by all three tabs so the page titles never shift when switching. */
 @Composable
-internal fun PageTitle(title: String, subtitle: String? = null, actions: (@Composable RowScope.() -> Unit)? = null) {
-    Row(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 12.dp).heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.headlineLarge)
-            if (subtitle != null) Text(subtitle, style = MaterialTheme.typography.bodySmall, color = AppColors.Secondary)
-        }
-        actions?.invoke(this)
+internal fun TopBar(title: String?, actions: @Composable RowScope.() -> Unit = {}) {
+    Row(Modifier.fillMaxWidth().height(56.dp).padding(start = PageGutter, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (title != null) Text(title, Modifier.weight(1f).semantics { heading() }, style = MaterialTheme.typography.headlineLarge, maxLines = 1)
+        actions()
     }
 }
 
@@ -93,16 +91,18 @@ internal fun StripedProgress(progress: Float, modifier: Modifier = Modifier, hei
 }
 
 @Composable
-internal fun <T> SegmentedControl(options: List<T>, selected: T, label: (T) -> String, onSelect: (T) -> Unit, modifier: Modifier = Modifier) {
-    Row(modifier.clip(RoundedCornerShape(11.dp)).background(AppColors.Control).padding(3.dp).selectableGroup()) {
+internal fun <T> SegmentedControl(
+    options: List<T>, selected: T, label: (T) -> String, onSelect: (T) -> Unit, modifier: Modifier = Modifier, compact: Boolean = false,
+) {
+    Row(modifier.clip(RoundedCornerShape(if (compact) 9.dp else 11.dp)).background(AppColors.Control).padding(if (compact) 2.dp else 3.dp).selectableGroup()) {
         options.forEach { option ->
             val active = option == selected
             Box(Modifier.weight(1f)
                 .then(if (active) Modifier.shadow(1.dp, RoundedCornerShape(8.dp)).background(AppColors.Surface, RoundedCornerShape(8.dp)) else Modifier)
                 .clip(RoundedCornerShape(8.dp))
                 .selectable(active, role = Role.Tab, onClick = { onSelect(option) })
-                .heightIn(min = 36.dp).padding(horizontal = 6.dp, vertical = 6.dp), contentAlignment = Alignment.Center) {
-                Text(label(option), style = MaterialTheme.typography.labelLarge,
+                .heightIn(min = if (compact) 28.dp else 36.dp).padding(horizontal = 6.dp, vertical = if (compact) 4.dp else 6.dp), contentAlignment = Alignment.Center) {
+                Text(label(option), style = if (compact) MaterialTheme.typography.labelMedium else MaterialTheme.typography.labelLarge,
                     fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
                     color = if (active) AppColors.Text else AppColors.Secondary, maxLines = 1)
             }
